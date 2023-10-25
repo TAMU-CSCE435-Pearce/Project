@@ -29,6 +29,7 @@ begin
     end for
 end BITONIC_SORT
 ```
+
 pseudocode from slides
 
 - Parallel Mergesort (MPI + CUDA)
@@ -48,6 +49,7 @@ end PARALLEL MERGE SORT
 pseudocode (slightly modified) from [tutorialspoint](https://www.tutorialspoint.com/parallel_algorithm/parallel_algorithm_sorting.htm)
 
 - Parallel Odd-Even Transposition Sort (MPI + CUDA)
+
 ```
 procedure ODD-EVEN PAR(n)
 begin
@@ -69,4 +71,5 @@ begin
     end for
 end ODD-EVEN PAR
 ```
+
 pseudocode from slides
