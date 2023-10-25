@@ -3,8 +3,8 @@
 ## 1. Group members:
 1. Connor Nicholls
 2. Noah Thompson
-3. Third
-4. Fourth
+3. Cyril John
+4. Tarun Arumugam
 
 ---
 
