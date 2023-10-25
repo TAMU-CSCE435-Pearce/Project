@@ -1,10 +1,10 @@
 # CSCE 435 Group project
 
 ## 1. Group members:
-1. First
-2. Second
-3. Third
-4. Fourth
+1. Kyle Diano
+2. Connor Bowling
+3. Chris Anand
+4. Connor McLean
 
 ---
 
