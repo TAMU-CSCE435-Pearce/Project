@@ -11,6 +11,8 @@
 ## 2. _due 10/25_ Project topic
 Choose 3+ parallel sorting algorithms, implement in MPI and CUDA.  Examine and compare performance in detail (computation time, communication time, how much data is sent) on a variety of inputs: sorted, random, reverse, sorted with 1% perturbed, etc.  Strong scaling, weak scaling, GPU performance.
 
+Note: Team will communicate via *Slack*
+
 ## 2. _due 10/25_ Brief project description (what algorithms will you be comparing and on what architectures)
 - Parallel Bitonic Sort on a Hypercube (MPI + CUDA)
 
