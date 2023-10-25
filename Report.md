@@ -34,16 +34,18 @@ pseudocode from slides
 - Parallel Mergesort (MPI + CUDA)
 
 ```
-procedure parallelmergesort(id, n, data, newdata)
+procedure PARALLEL MERGE SORT(id, n, data, newdata)
 begin
-    data = sequentialmergesort(data)
-    for dim = 1 to n
-        data = parallelmerge(id, dim, data)
-    end for
-    newdata = data
-end
+    data := sequentialmergesort(data)
+    for dim := 1 to n do
+        begin
+            data := parallelmerge(id, dim, data)
+        end
+    newdata := data
+end PARALLEL MERGE SORT
 ```
-pseudocode from [tutorialspoint](https://www.tutorialspoint.com/parallel_algorithm/parallel_algorithm_sorting.htm)
+
+pseudocode (slightly modified) from [tutorialspoint](https://www.tutorialspoint.com/parallel_algorithm/parallel_algorithm_sorting.htm)
 
 - Parallel Odd-Even Transposition Sort (MPI + CUDA)
 ```
