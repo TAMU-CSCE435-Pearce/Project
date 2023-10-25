@@ -18,21 +18,46 @@ Performance of different implementations of parallel ray tracing algorithms, inc
 - 2b Rendering custom geometry with BVH (MPI on each core) (tentative)
 
 ## 2. Pseudocode
+    if not rendering custom mesh
+        scene = InitializeScene (including basic shapes and any lights)
+    else
+        scene = LoadModel
 
-if not rendering custom mesh
-    scene = InitializeScene (including basic shapes and any lights)
-else
-    scene = LoadModel
+    camera = InitializeCamera
+    Allocate memory for frameBuffer
+    camera.TakePicture(scene)
+    output image from frameBuffer
 
-camera = InitializeCamera
-Allocate memory for frameBuffer
-camera.TakePicture(scene)
-output image from frameBuffer
 
-function:
-Camera TakePicture(scene)
-    initialize origin rays
-    for i in width
-        for j in height
-            ComputerRayColor()
-            write color to rendered image
+## function 1a:
+    Camera ComputeRayColor(scene, origin, direction, t0, t1, bounces, current)
+        int x = blockIdx.x * blockDim.x + threadIdx.x;
+        int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+        if ray intersects scene
+            for light in lights
+                calculate color of pixel
+
+        write color to frameBuffer
+
+    Camera TakePicture(scene)
+        initialize origin rays
+
+        num_pixels = width * height
+        num_blocks = num_pixels / num_threads
+
+        iniialize block size based on number of threads and expected image size
+
+        copy scene, camera values, and framebuffer to GPU
+
+        ComputeRayColor<<<blocks, threads>>>(scene, origin, direction, 0, inf, bounces, 0)
+
+        copy framebuffer from GPU
+
+## function 1b:
+
+
+## function 2a:
+
+
+## function 2b:
