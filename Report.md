@@ -1,7 +1,7 @@
 # CSCE 435 Group project
 
 ## 1. Group members:
-1. First
+1. Connor Nicholls
 2. Second
 3. Third
 4. Fourth
