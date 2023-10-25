@@ -12,10 +12,10 @@
 Performance of different implementations of parallel ray tracing algorithms, including bounding volume hierarchy (BVH) optimizations.
 
 ## 2. _due 10/25_ Brief project description (what algorithms will you be comparing and on what architectures)
-- 1a Rendering spheres + reflections (CUDA)
-- 1b Rendering spheres + reflections (MPI on each core)
-- 2a Rendering custom geometry with BVH (CUDA) (tentative)
-- 2b Rendering custom geometry with BVH (MPI on each core) (tentative)
+- Rendering spheres + reflections (CUDA)
+- Rendering spheres + reflections (MPI on each core)
+- Rendering custom geometry with BVH (CUDA) (tentative)
+- Rendering custom geometry with BVH (MPI on each core) (tentative)
 
 ## 2. Pseudocode
     if not rendering custom mesh
@@ -29,7 +29,10 @@ Performance of different implementations of parallel ray tracing algorithms, inc
     output image from frameBuffer
 
 
-## function 1a:
+
+
+
+## Rendering spheres + reflections (CUDA):
     Camera ComputeRayColor(scene, origin, direction, t0, t1, bounces, current)
         int x = blockIdx.x * blockDim.x + threadIdx.x;
         int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -54,7 +57,61 @@ Performance of different implementations of parallel ray tracing algorithms, inc
 
         copy framebuffer from GPU
 
-## function 1b:
+## Rendering spheres + reflections (MPI on each core):
+        DEFINE CHUNKSIZE = 16
+        
+        //maps a worker to a rectangle on the image
+        class workRecord
+          int worker;
+          int x;
+          int y;
+          int chunk[CHUNKSIZE * CHUNKSIZE * 3];
+          
+        
+        takePicture(scene, numWorkers)
+          initMessagePassing()
+        
+          vector<workRecord> workRecords;
+        
+          if(this.rank == 0) 
+            ... //slice the image into chunks of size CHUNKSIZE and add elements to workRecords to remember
+            
+            //since workRecord is really a plain C struct, this should be possible with reinterpret_cast<char*>
+            
+            for (workRecord r : workRecords)
+              sendMessage(r->worker, r)
+          
+          
+          messagePassingBarrier(world) //wait for master to assign work
+        
+          while(messagesInInbox) 
+            recvMessage(master, buf)
+            workRecord r = buf;
+            workRecords.pushBack(workRecord)
+              
+          messagePassingBarrier(world) //wait for workers to get their work
+        
+          //workers do work
+          if(this.rank != 0)
+            ... //for every pixel of every workrecord, calculate the color and store that back in the chunk field of the workRecord
+        
+            for(workRecord r : workRecords)
+              sendMessage(0, r) 
+        
+          messagePassingBarrier(world) //wait for workers to finish their work and send it back
+        
+          //receive messages with finished work from workers
+          if(this.rank == 0)
+            vector<workRecord> doneRecords;
+            while(messagesInInbox)
+              recvMessage(null, buf)
+              workRecord r = buf;
+              doneRecords.pushBack(workRecord)
+              
+              //great time for a sanity check between workRecords and doneRecords
+              
+              ... //stitch together image from doneRecords
+      
 
 
 ## function 2a:
