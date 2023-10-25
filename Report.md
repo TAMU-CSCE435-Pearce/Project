@@ -8,12 +8,17 @@
 
 ---
 
+## 2. Primary mode of communication
+Discord/GroupMe
+
 ## 2. _due 10/25_ Project topic
 
 ## 2. _due 10/25_ Brief project description (what algorithms will you be comparing and on what architectures)
 
 For example:
-- Algorithm 1a (MPI + CUDA)
-- Algorithm 1b (MPI on each core)
-- Algorithm 2a (MPI + CUDA)
-- Algorithm 2b (MPI on each core)
+- Enumeration Sort (MPI + CUDA)
+- Enumeration Sort (MPI on each core)
+- Odd-Even Transposition Sort (MPI + CUDA)
+- Odd-Even Transposition Sort (MPI on each core)
+- Parallel Merge Sort (MPI + CUDA)
+- Parallel Merge Sort (MPI on each core)
