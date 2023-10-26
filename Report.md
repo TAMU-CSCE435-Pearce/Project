@@ -160,57 +160,55 @@ Performance of different implementations of parallel ray tracing algorithms, inc
             copy framebuffer from GPU
 
 ## Rendering custom geometry with BVH (MPI on each core):
-        DEFINE CHUNKSIZE = 16
-        
-        //maps a worker to a rectangle on the image
-        class workRecord
-          int worker;
-          int x;
-          int y;
-          int chunk[CHUNKSIZE * CHUNKSIZE * 3];
-          
-        
-        takePicture(scene, numWorkers)
-          initMessagePassing()
-        
-          vector<workRecord> workRecords;
-        
-          if(this.rank == 0) 
-            ... //slice the image into chunks of size CHUNKSIZE and add elements to workRecords to remember
+This will be similar to the section "Rendering spheres + reflections (MPI on each core)", but generating the BVH must also be parallelized
+
+        parallelGenerateBVH(position info, triangles, numWorkers)
+          InitMessagePassing()
+          array[numWorkers] readyFlags = {1} //master tracks ready workers
+          if(rank == 0)
             
-            //since workRecord is really a plain C struct, this should be possible with reinterpret_cast<char*>
+          else
             
-            for (workRecord r : workRecords)
-              sendMessage(r->worker, r)
+          if(rank == 1)
+            BVH(position info, triangles)
+        
+          if(rank != 0) //workers continuously take jobs from master
+            for(;;)
+              //try to get a message
+              buf = receiveMessage()
+              if(isStopMessage(buf)) 
+                break
+              //tell master we're busy
+              sendMessage(master, "I'm busy.")
+              box = reinterpret_cast<buf>
+              box boxA, boxB
+              if(box is small enough)
+                //this box is the leaf, no more splitting
+                sendMessage(master, "This is done:" + box)
+              else
+                boxA, boxB = split(box)
+                //give the rest of the work to master
+                sendMessage(master, "Do this:" + boxA)
+                sendMessage(master, "Do this:" + boxB)
+              
+              //signal to master that we are free to work again
+              sendMessage(master, "I'm free.")
+          else 
+            //this is the master
+            ... //continously pass off new jobs to available workers by tracking them with readyFlags
+          MessagePassingBarrier()
           
+          ...
+        
+        
+        BVH(position info, triangles) 
+          //bounding box tree for a mesh of triangles
+          ... //init data about bounding box
+          root = new box(position info, triangles) //root of the BoundingVolumeHierarchy
+          split(root)
+        
+        
+        
+        split(box)
+          //push this info to two threads
           
-          messagePassingBarrier(world) //wait for master to assign work
-        
-          while(messagesInInbox) 
-            recvMessage(master, buf)
-            workRecord r = buf;
-            workRecords.pushBack(workRecord)
-              
-          messagePassingBarrier(world) //wait for workers to get their work
-        
-          //workers do work
-          if(this.rank != 0)
-            triangle res = BVHCollisionTest() //do a test for collision
-            ... //for every pixel of every workrecord, calculate the color and store that back in the chunk field of the workRecord
-        
-            for(workRecord r : workRecords)
-              sendMessage(0, r) 
-        
-          messagePassingBarrier(world) //wait for workers to finish their work and send it back
-        
-          //receive messages with finished work from workers
-          if(this.rank == 0)
-            vector<workRecord> doneRecords;
-            while(messagesInInbox)
-              recvMessage(null, buf)
-              workRecord r = buf;
-              doneRecords.pushBack(workRecord)
-              
-              //great time for a sanity check between workRecords and doneRecords
-              
-              ... //stitch together image from doneRecords
