@@ -88,7 +88,41 @@ function parallel_merge_sort(arr, num_threads)
     return parallel_merge(left, right)
 ```
 
+### Algorithm 3: Quick Sort
+'''C++
 
+using namespace std;
+ 
+int partition(int arr[],int low,int high)
+{
+   
+  int pivot=arr[high];
+  int i=(low-1);
+   
+  for(int j=low;j<=high;j++)
+  {
+    if(arr[j]<pivot)
+    {
+      i++;
+      swap(arr[i],arr[j]);
+    }
+  }
+  swap(arr[i+1],arr[high]);
+  return (i+1);
+}
+ 
+// The Quicksort function Implementation
+            
+void quickSort(int arr[],int low,int high)
+{
+  if(low<high)
+  {
+    int pi=partition(arr,low,high);
+    quickSort(arr,low,pi-1);
+    quickSort(arr,pi+1,high);
+  }
+}
+'''
 
 For example:
 
@@ -104,3 +138,4 @@ For example:
 - https://www.tutorialspoint.com/data_structures_algorithms/bubble_sort_algorithm.htm
 - https://compucademy.net/algorithmic-thinking-with-python-part-3-divide-and-conquer-strategy/#:~:text=There%20is%20a%20really%20clever%20trick%20that,the%20same%20type%20as%20the%20original%20problem.
 - https://teivah.medium.com/parallel-merge-sort-in-java-e3213ae9fa2c
+- https://www.geeksforgeeks.org/quick-sort/
