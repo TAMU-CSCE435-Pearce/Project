@@ -16,8 +16,8 @@ Performance of different implementations of parallel ray tracing algorithms, inc
 ## 2. _due 10/25_ Brief project description (what algorithms will you be comparing and on what architectures)
 - Rendering spheres + reflections (CUDA)
 - Rendering spheres + reflections (MPI on each core)
-- Rendering custom geometry with BVH (CUDA) (tentative)
-- Rendering custom geometry with BVH (MPI on each core) (tentative)
+- Rendering custom geometry with BVH (CUDA)
+- Rendering custom geometry with BVH (MPI on each core)
 
 ## 2. Pseudocode
     if not rendering custom mesh
@@ -116,47 +116,47 @@ Performance of different implementations of parallel ray tracing algorithms, inc
       
 
 
-## function 2a:
+## Rendering custom geometry with BVH (CUDA):
+    
+      BVH ConstructBVH(scene, bvh, iterations)
+        sort morton codes for scene objects
+        initialize BVH with N-1 internal nodes and N leaf nodes
+        calculate split for internal nodes and assign children <<<blocks, threads>>>
+        synchronize()
+        return BVH
+    
+      object BVHIntersect(scene, bvh, origin, direction)
+        while hit not detected:
+          cast ray against current bvh level
+          descend to next bvh level if hit, otherwise return null
+    
+        return leaf at bvh level
+          
+    
+      Camera ComputeRayColor(scene, bvh, origin, direction, t0, t1, bounces, current)
+            int x = blockIdx.x * blockDim.x + threadIdx.x;
+            int y = blockIdx.y * blockDim.y + threadIdx.y;
+            
+            for i in range(bounces):
+              hit = BVHIntersect(scene, bvh, origin, direction)
+              origin = hit.position
+              direction = hit.normal
+              recalculate color
+    
+            write color to frameBuffer[x][y]
+    
+        Camera TakePicture(scene)
+            initialize origin rays
+    
+            num_pixels = width * height
+            num_blocks = num_pixels / num_threads
+    
+            iniialize block size based on number of threads and expected image size
+    
+            copy scene, camera values, and framebuffer to GPU
+    
+            ComputeRayColor<<<blocks, threads>>>(scene, origin, direction, 0, inf, bounces, 0)
+    
+            copy framebuffer from GPU
 
-  BVH ConstructBVH(scene, bvh, iterations)
-    sort morton codes for scene objects
-    initialize BVH with N-1 internal nodes and N leaf nodes
-    calculate split for internal nodes and assign children <<<blocks, threads>>>
-    synchronize()
-    return BVH
-
-  object BVHIntersect(scene, bvh, origin, direction)
-    while hit not detected:
-      cast ray against current bvh level
-      descend to next bvh level if hit, otherwise return null
-
-    return leaf at bvh level
-      
-
-  Camera ComputeRayColor(scene, bvh, origin, direction, t0, t1, bounces, current)
-        int x = blockIdx.x * blockDim.x + threadIdx.x;
-        int y = blockIdx.y * blockDim.y + threadIdx.y;
-        
-        for i in range(bounces):
-          hit = BVHIntersect(scene, bvh, origin, direction)
-          origin = hit.position
-          direction = hit.normal
-          recalculate color
-
-        write color to frameBuffer[x][y]
-
-    Camera TakePicture(scene)
-        initialize origin rays
-
-        num_pixels = width * height
-        num_blocks = num_pixels / num_threads
-
-        iniialize block size based on number of threads and expected image size
-
-        copy scene, camera values, and framebuffer to GPU
-
-        ComputeRayColor<<<blocks, threads>>>(scene, origin, direction, 0, inf, bounces, 0)
-
-        copy framebuffer from GPU
-
-## function 2b:
+## Rendering custom geometry with BVH (MPI on each core):
