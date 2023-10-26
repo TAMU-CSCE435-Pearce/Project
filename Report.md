@@ -18,6 +18,7 @@ Our team's primary method of communication will be GroupMe with Slack as a secon
 Sorting
 
 ## 2c. Brief project description (what algorithms will you be comparing and on what architectures)
+Each of the following three algorithms will be run sequentially and in parallel using MPI. 
 
 ### Algorithm 1: Bubble Sort
 
