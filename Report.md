@@ -4,7 +4,9 @@
 1. Joseph Buskmiller
 2. Fredy Medawar
 3. Shreeman Jayaram
-4. Ahsan Yahya 
+4. Ahsan Yahya
+
+Communication will be by discord.
 
 ---
 
