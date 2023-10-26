@@ -160,7 +160,7 @@ Performance of different implementations of parallel ray tracing algorithms, inc
             copy framebuffer from GPU
 
 ## Rendering custom geometry with BVH (MPI on each core):
- DEFINE CHUNKSIZE = 16
+        DEFINE CHUNKSIZE = 16
         
         //maps a worker to a rectangle on the image
         class workRecord
