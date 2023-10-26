@@ -66,6 +66,7 @@ function mergeSort(x):
 ```
 
 Parallel:
+The following parallel Merge Sort algorithms will be implemented using MPI.
 ```python
 function parallel_merge_sort(arr, num_threads)
     if length(arr) <= 1
