@@ -87,42 +87,21 @@ function parallel_merge_sort(arr, num_threads)
 
     return parallel_merge(left, right)
 ```
+### Algorithm 1: Bubble Sort
 
-### Algorithm 3: Quick Sort
-''' C++
+```
+begin BubbleSort(list)
 
-using namespace std;
- 
-int partition(int arr[],int low,int high)
-{
-   
-  int pivot=arr[high];
-  int i=(low-1);
-   
-  for(int j=low;j<=high;j++)
-  {
-    if(arr[j]<pivot)
-    {
-      i++;
-      swap(arr[i],arr[j]);
-    }
-  }
-  swap(arr[i+1],arr[high]);
-  return (i+1);
-}
- 
-// The Quicksort function Implementation
-            
-void quickSort(int arr[],int low,int high)
-{
-  if(low<high)
-  {
-    int pi=partition(arr,low,high);
-    quickSort(arr,low,pi-1);
-    quickSort(arr,pi+1,high);
-  }
-}
-'''
+   for all elements of list
+      if list[i] > list[i+1]
+         swap(list[i], list[i+1])
+      end if
+   end for
+
+   return list
+
+end BubbleSort
+```
 
 For example:
 
