@@ -196,9 +196,14 @@ This will be similar to the section "Rendering spheres + reflections (MPI on eac
           else 
             //this is the master
             ... //continously pass off new jobs to available workers by tracking them with readyFlags
+            ... //if a message is received and starts with "This is done:" save it to combine later
+            if(no more jobs)
+              break
+              
           MessagePassingBarrier()
           
-          ...
+          ... // combine results from "This is done:" messages
+          return BVH
         
         
         BVH(position info, triangles) 
