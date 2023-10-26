@@ -3,7 +3,7 @@
 ## 1. Group members:
 1. Joseph Buskmiller
 2. Fredy Medawar
-3. Shreeman Jayaram
+3. Shreeman Kuppa Jayaram
 4. Ahsan Yahya
 
 Communication will be by discord.
@@ -166,10 +166,13 @@ This will be similar to the section "Rendering spheres + reflections (MPI on eac
           InitMessagePassing()
           array[numWorkers] readyFlags = {1} //master tracks ready workers
           if(rank == 0)
+            // master sends messages to worker threads with the current root info for worker threads to split off of
+            // master receives "This is done" message from workers and proceeds with next phase (intersection)
             
           else
             
           if(rank == 1)
+            // Initialize BVH
             BVH(position info, triangles)
         
           if(rank != 0) //workers continuously take jobs from master
