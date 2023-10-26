@@ -89,7 +89,7 @@ function parallel_merge_sort(arr, num_threads)
 ```
 
 ### Algorithm 3: Quick Sort
-'''C++
+''' C++
 
 using namespace std;
  
