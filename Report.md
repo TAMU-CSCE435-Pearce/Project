@@ -116,15 +116,6 @@ void quickSort(int arr[], int low, int high) {
 }
 ```
 
-For example:
-
-- Algorithm 1a (MPI + CUDA)
-- Algorithm 1b (MPI on each core)
-- Algorithm 2a (MPI + CUDA)
-- Algorithm 2b (MPI on each core)
-
-
-
 ## 2d. Citations
 
 - https://www.tutorialspoint.com/data_structures_algorithms/bubble_sort_algorithm.htm
