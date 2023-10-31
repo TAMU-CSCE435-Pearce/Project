@@ -18,7 +18,7 @@ Our team's primary method of communication will be GroupMe with Slack as a secon
 Sorting
 
 ## 2c. Brief project description (what algorithms will you be comparing and on what architectures)
-Each of the following three algorithms will be run sequentially and in parallel using MPI. 
+Each of the following three algorithms will be run in parallel using MPI and CUDA. 
 
 ### Algorithm 1: Bubble Sort
 
@@ -123,3 +123,12 @@ void quickSort(int arr[], int low, int high) {
 - https://compucademy.net/algorithmic-thinking-with-python-part-3-divide-and-conquer-strategy/#:~:text=There%20is%20a%20really%20clever%20trick%20that,the%20same%20type%20as%20the%20original%20problem.
 - https://teivah.medium.com/parallel-merge-sort-in-java-e3213ae9fa2c
 - https://www.geeksforgeeks.org/quick-sort/
+
+## 3. _due 11/08_ Pseudocode for each algorithm and implementation
+
+## 3. _due 11/08_ Evaluation plan - what and how will you measure and compare
+
+For example:
+- Effective use of a GPU (play with problem size and number of threads)
+- Strong scaling to more nodes (same problem size, increase number of processors)
+- Weak scaling (increase problem size, increase number of processors)
