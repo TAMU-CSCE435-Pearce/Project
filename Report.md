@@ -220,3 +220,11 @@ This will be similar to the section "Rendering spheres + reflections (MPI on eac
         split(box)
           //push this info to two threads
           
+## 3. _due 11/08_ Pseudocode for each algorithm and implementation
+
+## 3. _due 11/08_ Evaluation plan - what and how will you measure and compare
+
+For example:
+- Effective use of a GPU (play with problem size and number of threads)
+- Strong scaling to more nodes (same problem size, increase number of processors)
+- Weak scaling (increase problem size, increase number of processors)
