@@ -26,7 +26,7 @@ void parallel_array_fill(int NUM_VALS, float *values, int num_procs, int rank)
 
     float *local_values = (float *)malloc(local_size * sizeof(float));
 
-    srand(time(NULL));
+    srand(time(NULL) + rank);
     for (int i = 0; i < local_size; ++i) 
     {
         local_values[i] = (float)rand() / (float)RAND_MAX;
@@ -85,7 +85,7 @@ void parallel_sort_check(int NUM_VALS, float *values, int num_procs, int rank)
             float cur_largest = values[local_size - 1];
             for (int i = 1; i < NUM_VALS/local_size; i++)
             {
-                if (values[i*local_size] > cur_largest)
+                if (values[i*local_size] >= cur_largest)
                 {
                     cur_largest = values[(i+1)*local_size - 1];
                 }
