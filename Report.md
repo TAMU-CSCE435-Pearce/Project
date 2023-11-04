@@ -124,7 +124,7 @@ void quickSort(int arr[], int low, int high) {
   ```
   //Given P processes
   Sample 4 splitters
-  Send splitters to all processes using MPI_Allreduce
+  Send splitters to all processes using MPI_Allgather
   Sort the splitters and decide upon bucket cutoffs
   Evaluate local elements and place into send buffers
   Allocate receive buffers for incoming data
@@ -144,6 +144,7 @@ void quickSort(int arr[], int low, int high) {
 - https://www.geeksforgeeks.org/quick-sort/
 - https://cse.buffalo.edu/faculty/miller/Courses/CSE702/Nicolas-Barrios-Fall-2021.pdf
 - https://en.wikipedia.org/wiki/Samplesort
+- https://www.geeksforgeeks.org/cpp-program-for-quicksort/#
 
 
 
