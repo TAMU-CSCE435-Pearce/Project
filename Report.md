@@ -15,8 +15,13 @@ Parallel Sorting Algorithms
 ## 2a. Communication Method
 Our team's primary method of communication will be GroupMe with Slack as a secondary method.
 
-## 2c. Brief project description (what algorithms will you be comparing and on what architectures)
-Each of the following three algorithms will be run in parallel using MPI and CUDA. 
+## 2b. Brief project description (what algorithms will you be comparing and on what architectures)
+Each of the selected sort algorithms, Bubble, Merge, Quick, & Sample will be run in parallel using MPI and CUDA separately. 
+
+## 2c. Pseudocode for each parallel algorithm
+- For MPI programs, include MPI calls you will use to coordinate between processes
+- For CUDA programs, indicate which computation will be performed in a CUDA kernel,
+  and where you will transfer data to/from GPU
 
 ### Algorithm 1: Bubble Sort
 
@@ -114,41 +119,43 @@ void quickSort(int arr[], int low, int high) {
   }
 }
 ```
+### Algorithm 4: Sample Sort
+  #### MPI
+  ```
+  //Given P processes
+  Sample 4 splitters
+  Send splitters to all processes using MPI_Allreduce
+  Sort the splitters and decide upon bucket cutoffs
+  Evaluate local elements and place into send buffers
+  Allocate receive buffers for incoming data
+  Send data in buffers to the appropriate process with MPI_send
+  Combine local and incoming data
+  Sort with sequential algorithm
+  ```
+
+  #### CUDA
+  ```
+  ```
 
 ## 2d. Citations
-
 - https://www.tutorialspoint.com/data_structures_algorithms/bubble_sort_algorithm.htm
 - https://compucademy.net/algorithmic-thinking-with-python-part-3-divide-and-conquer-strategy/#:~:text=There%20is%20a%20really%20clever%20trick%20that,the%20same%20type%20as%20the%20original%20problem.
 - https://teivah.medium.com/parallel-merge-sort-in-java-e3213ae9fa2c
 - https://www.geeksforgeeks.org/quick-sort/
+- https://cse.buffalo.edu/faculty/miller/Courses/CSE702/Nicolas-Barrios-Fall-2021.pdf
+- https://en.wikipedia.org/wiki/Samplesort
 
-## 3. _due 11/08_ Pseudocode for each algorithm and implementation
 
-## 3. _due 11/08_ Evaluation plan - what and how will you measure and compare
 
-For example:
-- Effective use of a GPU (play with problem size and number of threads)
-- Strong scaling to more nodes (same problem size, increase number of processors)
-- Weak scaling (increase problem size, increase number of processors)
-
-### 2a. Brief project description (what algorithms will you be comparing and on what architectures)
-
-For example:
-- Algorithm 1a (MPI + CUDA)
-- Algorithm 1b (MPI on each core)
-- Algorithm 2a (MPI + CUDA)
-- Algorithm 2b (MPI on each core)
-
-### 2b. Pseudocode for each parallel algorithm
-- For MPI programs, include MPI calls you will use to coordinate between processes
-- For CUDA programs, indicate which computation will be performed in a CUDA kernel,
-  and where you will transfer data to/from GPU
-
-### 2c. Evaluation plan - what and how will you measure and compare
+## 2e. Evaluation plan - what and how will you measure and compare
 - Input sizes, Input types
 - Strong scaling (same problem size, increase number of processors/nodes)
 - Weak scaling (increase problem size, increase number of processors)
 - Number of threads in a block on the GPU 
+
+Each algorithm with be run with the input types of sorted, reverse sorted, and randomized. The input sizes are planned to be 2^16, 2^20, and 2^24.
+Both weak and strong scaling will be analyzed and compared against the other algorithms being tested.
+Block size will be... 
 
 
 ## 3. Project implementation
