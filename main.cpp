@@ -19,7 +19,7 @@ const char* array_fill_name = "array_fill";
 const char* sort_check_name = "sort_check";
 const char* sample_sort_name = "sample_sort";
 
-void parallel_array_fill(int NUM_VALS, vector<float> *local_values, int local_size, int num_procs, int rank)
+void parallel_array_fill(int NUM_VALS, vector<float> *local_values, int local_size, int num_procs, int rank, int array_fill_type)
 {
     CALI_MARK_BEGIN(array_fill_name);
     int start = rank * local_size;
@@ -28,10 +28,27 @@ void parallel_array_fill(int NUM_VALS, vector<float> *local_values, int local_si
     // Print process segment of array
     // printf("rank: %d, start: %d, end: %d, local_size:%d\n", rank, start, end, local_size);
 
-    srand(time(NULL) + rank);
-    for (int i = 0; i < local_size; ++i) 
+    if (array_fill_type == 0)
     {
-        local_values->push_back((float)rand() / (float)RAND_MAX);
+        srand(time(NULL) + rank);
+        for (int i = 0; i < local_size; ++i) 
+        {
+            local_values->push_back((float)rand() / (float)RAND_MAX);
+        }
+    }
+    else if (array_fill_type == 1)
+    {
+        for (int i = 0; i < local_size; ++i) 
+        {
+            local_values->push_back(start + i);
+        }
+    }
+    else if (array_fill_type == 2)
+    {
+        for (int i = 0; i < local_size; ++i) 
+        {
+            local_values->push_back(NUM_VALS - end - i);
+        }
     }
     CALI_MARK_END(array_fill_name);
 }
@@ -399,6 +416,7 @@ int main(int argc, char* argv[])
     CALI_CXX_MARK_FUNCTION;
 
     int NUM_VALS = atoi(argv[1]);
+    int array_fill_type = atoi(argv[2]);
 
     int rank, num_procs;
     MPI_Init(&argc, &argv);
@@ -413,16 +431,16 @@ int main(int argc, char* argv[])
     vector<float> local_values;
 
     // Fill the local portions of the values then gather into values (NUM_VALS MUST BE DIVISIBLE BY num_procs)
-    parallel_array_fill(NUM_VALS, &local_values, local_size, num_procs, rank);
+    parallel_array_fill(NUM_VALS, &local_values, local_size, num_procs, rank, array_fill_type);
 
     // Wait until generation completes on all processes
     MPI_Barrier(MPI_COMM_WORLD);
 
-    if (PRINT_DEBUG)
-    {
+    // if (PRINT_DEBUG)
+    // {
         printArray(NUM_VALS, values, local_values, local_size, num_procs, rank);
         MPI_Barrier(MPI_COMM_WORLD);
-    }
+    // }
 
     // SORT
     sample_sort(NUM_VALS, &local_values, local_size, num_procs, rank, 10);
