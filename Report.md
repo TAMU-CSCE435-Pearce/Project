@@ -122,15 +122,14 @@ void quickSort(int arr[], int low, int high) {
 ### Algorithm 4: Sample Sort
   #### MPI
   ```
-  //Given P processes
   Sample 4 splitters
   Send splitters to all processes using MPI_Allgather
   Sort the splitters and decide upon bucket cutoffs
   Evaluate local elements and place into send buffers
-  Allocate receive buffers for incoming data
-  Send data in buffers to the appropriate process with MPI_send
-  Combine local and incoming data
-  Sort with sequential algorithm
+  Calculate and communicate buffer sizes using MPI_Gather
+  Allocate receive buffer for incoming data
+  Send data in buffers to the appropriate process with MPI_Gatherv
+  Sort with sequential quicksort
   ```
 
   #### CUDA

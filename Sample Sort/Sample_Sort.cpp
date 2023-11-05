@@ -39,7 +39,6 @@ void generateData(vector<int> &localData, int startingSortChoice, int amountToGe
     }
 }
 
-
 /* Sequential Quick Sort & Helpers 
 *  quickSort and partition function from geeksforgeeks.org
 */
@@ -95,37 +94,49 @@ void quickSort(int arr[], int start, int end)
     quickSort(arr, p + 1, end);
 }
 
-
 /* Main Alg */
 void sampleSort(vector<int> &localData, vector<int> &sortedData, int my_rank) {
     /* Sample splitters */
     int numSplitters = 4;
     vector<int> sampledSplitters;
     srand(8472384065);
+    
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(comp_small);
     for(int i = 0; i < numSplitters; i++) {
         sampledSplitters.push_back(localData.at(rand() % localData.size()));
     }
+    CALI_MARK_END(comp_small);
+    CALI_MARK_END(comp);
 
 
     /* Combine splitters */
     int totalSplitterArraySize = numSplitters * numProcesses;
-    //vector<int> allSplitters;
-    //allSplitters.resize(totalSplitterArraySize)
     int allSplitters[totalSplitterArraySize];
-    
+
+    CALI_MARK_BEGIN(comm);
+    CALI_MARK_BEGIN(comm_small);
     MPI_Allgather(&sampledSplitters[0], numSplitters, MPI_INT, &allSplitters[0], numSplitters, MPI_INT, MPI_COMM_WORLD);
+    CALI_MARK_END(comm_small);
+    CALI_MARK_END(comm);
 
 
     /* Sort splitters & Decide cuts */
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(comp_small);
     quickSort(allSplitters, 0, totalSplitterArraySize-1); //In place sort
 
     vector<int> choosenSplitters;
     for(int i = 1; i < numProcesses; i++) {
         choosenSplitters.push_back(allSplitters[i*numSplitters]);
     }
+    CALI_MARK_END(comp_small);
+    CALI_MARK_END(comp);
 
 
     /* Eval local elements and place into buffers */
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(comp_large);
     vector<vector<int>> sendBuckets;
     for(int i = 0; i < numProcesses; i++){sendBuckets.push_back(vector<int>());}
 
@@ -140,9 +151,12 @@ void sampleSort(vector<int> &localData, vector<int> &sortedData, int my_rank) {
         }
         if(notUsed){sendBuckets.at(sendBuckets.size()-1).push_back(localData.at(i));}
     }
-
+    CALI_MARK_END(comp_large);
+    CALI_MARK_END(comp);
 
     /* Send/Receive Data */ 
+    CALI_MARK_BEGIN(comm);
+    CALI_MARK_BEGIN(comm_small);
     //Gather sizes
     int localBucketSizes[numProcesses];
     for(int i = 0; i < numProcesses; i++) {localBucketSizes[i] = sendBuckets.at(i).size();}
@@ -150,26 +164,39 @@ void sampleSort(vector<int> &localData, vector<int> &sortedData, int my_rank) {
     //Communicate sizes
     int targetSizes[numProcesses];
     MPI_Gather(&localBucketSizes[my_rank], 1, MPI_INT, &targetSizes, 1, MPI_INT, my_rank, MPI_COMM_WORLD);
+    CALI_MARK_END(comm_small);
+    CALI_MARK_END(comm);
 
     //Sum and calculate displacements
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(comp_small);
     int myTotalSize = 0;
     for(int i = 0; i < numProcesses; i++) {myTotalSize += targetSizes[i];}
 
     int displacements[numProcesses];
     displacements[0] = 0;
     for(int i = 0; i < (numProcesses-1); i++) {displacements[i+1] = displacements[i] + targetSizes[i];}
+    CALI_MARK_END(comp_small);
+    CALI_MARK_END(comp);
     
     //Allocate array
     int unsortedData[myTotalSize];
 
     //Gather data
+    CALI_MARK_BEGIN(comm);
+    CALI_MARK_BEGIN(comm_large);
     MPI_Gatherv(&sendBuckets[my_rank][0], sendBuckets.at(my_rank.size()), MPI_INT, &unsortedData, &targetSizes, &displacements, MPI_INT, my_rank, MPI_COMM_WORLD);
+    CALI_MARK_END(comm_large);
+    CALI_MARK_END(comm);
 
     /* Sort */
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(comp_large);
     quickSort(unsortedData, 0, myTotalSize-1);
     sortedData.insert(sortedData.end(), &unsortedData[0], &unsortedData[myTotalSize]);
+    CALI_MARK_END(comp_large);
+    CALI_MARK_END(comp);
 }
-
 
 /* Verify */
 bool verifyCorrect(vector<int> &sortedData, int my_rank) {
@@ -217,7 +244,7 @@ int main (int argc, char *argv[])
     const char* correctness_check = "correctness_check ";
     const char* comm = "comm";
     const char* comm_large = "comm_large";
-    const char* comm = "comm _small";
+    const char* comm_small = "comm _small";
     const char* comp = "comp";
     const char* comp_large = "comp_large";
     const char* comp_small = "comp_small";
@@ -237,22 +264,30 @@ int main (int argc, char *argv[])
         exit(1);
     }
 
+    CALI_MARK_BEGIN(main);
+
     // Create caliper ConfigManager object
     cali::ConfigManager mgr;
     mgr.start();
 
     //Data generation
+    CALI_MARK_BEGIN(data_init);
     vector<int> myLocalData;
     int amountToGenerateMyself = inputSize/numProcesses; //Should aways be based around powers of 2
     int startingPos = my_rank * (amountToGenerateMyself);
     generateData(myLocalData, sortingType, amountToGenerateMyself, startingPos);
+    CALI_MARK_END(data_init);
 
     //Main Alg
     vector<int> sortedData;
     sampleSort(myLocalData, sortedData, my_rank);
 
     //Verification
+    CALI_MARK_BEGIN(correctness_check);
     bool correct = verifyCorrect(sortedData, my_rank);
+    CALI_MARK_END(correctness_check);
+
+    CALI_MARK_END(main);
     if(correct){printf("All is good \n");}
     else {printf("There is a problem with the sorting. Quitting...\n");}
 
@@ -267,6 +302,7 @@ int main (int argc, char *argv[])
     case 2:
         inputType = "Reverse Sorted"
         break;
+    }
     adiak::init(NULL);
     adiak::launchdate();    // launch date of the job
     adiak::libraries();     // Libraries used
@@ -280,7 +316,7 @@ int main (int argc, char *argv[])
     adiak::value("InputType", inputType); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
     adiak::value("num_procs", numProcesses); // The number of processors (MPI ranks)
     adiak::value("group_num", 16); // The number of your group (integer, e.g., 1, 10)
-    adiak::value("implementation_source", "Handwritten based on class discussions") // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
+    adiak::value("implementation_source", "Handwritten & Online") // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
 
     // Flush Caliper output before finalizing MPI
    mgr.stop();
