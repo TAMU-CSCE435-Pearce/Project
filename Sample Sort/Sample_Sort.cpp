@@ -95,7 +95,7 @@ void quickSort(int arr[], int start, int end)
 
 
 /* Main Alg */
-void sampleSort(vector<int> &localData,) {
+void sampleSort(vector<int> &localData, int my_rank) {
     /* Sample splitters */
     int numSplitters = 4;
     vector<int> sampledSplitters;
@@ -111,7 +111,7 @@ void sampleSort(vector<int> &localData,) {
     //allSplitters.resize(totalSplitterArraySize)
     int allSplitters[totalSplitterArraySize];
     
-    MPI_Allgather(sampledSplitters.data(), numSplitters, MPI_INT, &allSplitters, totalSplitterArraySize, MPI_INT, MPI_COMM_WORLD);
+    MPI_Allgather(&sampledSplitters[0], numSplitters, MPI_INT, &allSplitters[0], numSplitters, MPI_INT, MPI_COMM_WORLD);
 
 
     /* Sort splitters & Decide cuts */
@@ -124,23 +124,47 @@ void sampleSort(vector<int> &localData,) {
 
 
     /* Eval local elements and place into buffers */
+    vector<vector<int>> sendBuckets;
+    for(int i = 0; i < numProcesses; i++){sendBuckets.push_back(vector<int>());}
+
+    for(int i = 0; i < localData.size(); i++) {
+        int notUsed = 1;
+        for(int j = 0; j < choosenSplitters.size(); j++) {
+            if(localData.at(i) < choosenSplitters.at(j)) {
+                sendBuckets.at(j).push_back(localData.at(i));
+                notUsed = 0;
+                break;
+            }
+        }
+        if(notUsed){sendBuckets.at(sendBuckets.size()-1).push_back(localData.at(i));}
+    }
 
 
+    /* Send/Receive Data */ 
+    //Gather sizes
+    int localBucketSizes[numProcesses];
+    for(int i = 0; i < numProcesses; i++) {localBucketSizes[i] = sendBuckets.at(i).size();}
 
-    /* Allocate receive buffers and send/receive data */
+    //Communicate sizes
+    int targetSizes[numProcesses];
+    MPI_Gather(&localBucketSizes[my_rank], 1, MPI_INT, &targetSizes, 1, MPI_INT, my_rank, MPI_COMM_WORLD);
 
+    //Sum and calculate displacements
+    int myTotalSize = 0;
+    for(int i = 0; i < numProcesses; i++) {myTotalSize += targetSizes[i];}
 
-    /* Combine with local */
+    int displacements[numProcesses];
+    displacements[0] = 0;
+    for(int i = 0; i < (numProcesses-1); i++) {displacements[i+1] = displacements[i] + targetSizes[i];}
+    
+    //Allocate array
+    int unsortedData[myTotalSize];
 
+    //Gather data
+    MPI_Gatherv(&sendBuckets[my_rank][0], sendBuckets.at(my_rank.size()), MPI_INT, &unsortedData, &targetSizes, &displacements, MPI_INT, my_rank, MPI_COMM_WORLD);
 
     /* Sort */
-
-
-
-
-
-
-
+    quickSort(unsortedData, 0, myTotalSize-1);
 }
 
 
@@ -206,7 +230,7 @@ int main (int argc, char *argv[])
 
 
     //Main Alg
-    sampleSort(myLocalData);
+    sampleSort(myLocalData, my_rank);
 
 
 
@@ -214,4 +238,10 @@ int main (int argc, char *argv[])
 
 
 
+
+    // Flush Caliper output before finalizing MPI
+   mgr.stop();
+   mgr.flush();
+
+   MPI_Finalize();
 }
