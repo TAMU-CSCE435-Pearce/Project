@@ -3,39 +3,55 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
+#include <iostream>
 
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
 #include <adiak.hpp>
 
 using std::vector;
+using std::string;
+using std::swap;
 
 int inputSize, numProcesses;
 
+/* Define Caliper region names */
+const char* mainFunction = "main";
+const char* data_init = "data_init";
+const char* correctness_check = "correctness_check ";
+const char* comm = "comm";
+const char* comm_large = "comm_large";
+const char* comm_small = "comm _small";
+const char* comp = "comp";
+const char* comp_large = "comp_large";
+const char* comp_small = "comp_small";
+
 /* Data generation */
-void generateData(vector<int> &localData, int startingSortChoice, int amountToGenerate, int startingPosition) {
+void generateData(vector<int> &localData, int startingSortChoice, int amountToGenerate, int startingPosition, int my_rank) {
     switch (startingSortChoice) {
-    case 0: //Random
-        srand(5304284160);
-        for(int i = 0; i < amountToGenerate; i++) {
-            localData.push_back(rand() % inputSize);
+        case 0: { //Random
+            srand((my_rank+5)*(my_rank+12)*1235);
+            for(int i = 0; i < amountToGenerate; i++) {
+                localData.push_back(rand() % inputSize);
+            }
+            break;
         }
-        break;
 
-    case 1: //Sorted
-        int endValue = startingPosition + amountToGenerate;
-        for(int i = startingPosition; i < endValue; i++) {
-            localData.push_back(i);
+        case 1: {//Sorted
+            int endValue = startingPosition + amountToGenerate;
+            for(int i = startingPosition; i < endValue; i++) {
+                localData.push_back(i);
+            }
+            break;
         }
-        break;
-
-    case 2:  //Reverse sorted
-        int startValue = inputSize - 1 - startingPosition;
-        int endValue = inputSize - amountToGenerate - startingPosition;
-        for(int i = startValue; i >= endValue; i--) {
-            localData.push_back(i);
+        case 2: { //Reverse sorted
+            int startValue = inputSize - 1 - startingPosition;
+            int endValue = inputSize - amountToGenerate - startingPosition;
+            for(int i = startValue; i >= endValue; i--) {
+                localData.push_back(i);
+            }
+            break;
         }
-        break;
     }
 }
 
@@ -99,7 +115,7 @@ void sampleSort(vector<int> &localData, vector<int> &sortedData, int my_rank) {
     /* Sample splitters */
     int numSplitters = 4;
     vector<int> sampledSplitters;
-    srand(8472384065);
+    srand(84723840);
     
     CALI_MARK_BEGIN(comp);
     CALI_MARK_BEGIN(comp_small);
@@ -133,7 +149,6 @@ void sampleSort(vector<int> &localData, vector<int> &sortedData, int my_rank) {
     CALI_MARK_END(comp_small);
     CALI_MARK_END(comp);
 
-
     /* Eval local elements and place into buffers */
     CALI_MARK_BEGIN(comp);
     CALI_MARK_BEGIN(comp_large);
@@ -163,7 +178,9 @@ void sampleSort(vector<int> &localData, vector<int> &sortedData, int my_rank) {
 
     //Communicate sizes
     int targetSizes[numProcesses];
-    MPI_Gather(&localBucketSizes[my_rank], 1, MPI_INT, &targetSizes, 1, MPI_INT, my_rank, MPI_COMM_WORLD);
+    for(int i = 0; i < numProcesses; i++) {
+        MPI_Gather(&localBucketSizes[i], 1, MPI_INT, &targetSizes[0], 1, MPI_INT, i, MPI_COMM_WORLD);
+    }
     CALI_MARK_END(comm_small);
     CALI_MARK_END(comm);
 
@@ -185,7 +202,9 @@ void sampleSort(vector<int> &localData, vector<int> &sortedData, int my_rank) {
     //Gather data
     CALI_MARK_BEGIN(comm);
     CALI_MARK_BEGIN(comm_large);
-    MPI_Gatherv(&sendBuckets[my_rank][0], sendBuckets.at(my_rank.size()), MPI_INT, &unsortedData, &targetSizes, &displacements, MPI_INT, my_rank, MPI_COMM_WORLD);
+    for(int i = 0; i < numProcesses; i++) {
+        MPI_Gatherv(&sendBuckets[i][0], sendBuckets.at(i).size(), MPI_INT, &unsortedData, targetSizes, displacements, MPI_INT, i, MPI_COMM_WORLD);
+    }
     CALI_MARK_END(comm_large);
     CALI_MARK_END(comm);
 
@@ -233,21 +252,22 @@ int main (int argc, char *argv[])
         return 0;
     }
 
+    string inputType;
+    switch (sortingType) {
+    case 0: {
+        inputType = "Randomized";
+        break; }
+    case 1: {
+        inputType = "Sorted";
+        break; }
+    case 2: {
+        inputType = "Reverse Sorted";
+        break; }
+    }
+
     int my_rank,        /* rank id of my process */
         num_ranks,      /* total number of ranks*/
         rc;             /* misc */
-
-    
-    /* Define Caliper region names */
-    const char* main = "main";
-    const char* data_init = "data_init";
-    const char* correctness_check = "correctness_check ";
-    const char* comm = "comm";
-    const char* comm_large = "comm_large";
-    const char* comm_small = "comm _small";
-    const char* comp = "comp";
-    const char* comp_large = "comp_large";
-    const char* comp_small = "comp_small";
 
     /* MPI Setup */
     MPI_Init(&argc,&argv);
@@ -264,7 +284,13 @@ int main (int argc, char *argv[])
         exit(1);
     }
 
-    CALI_MARK_BEGIN(main);
+    if(my_rank == 0) {
+        printf("Input type: %d\n", sortingType);
+        printf("Number Processes: %d\n", numProcesses); 
+        printf("Input Size: %d\n", inputSize);  
+    }
+
+    CALI_MARK_BEGIN(mainFunction);
 
     // Create caliper ConfigManager object
     cali::ConfigManager mgr;
@@ -275,7 +301,7 @@ int main (int argc, char *argv[])
     vector<int> myLocalData;
     int amountToGenerateMyself = inputSize/numProcesses; //Should aways be based around powers of 2
     int startingPos = my_rank * (amountToGenerateMyself);
-    generateData(myLocalData, sortingType, amountToGenerateMyself, startingPos);
+    generateData(myLocalData, sortingType, amountToGenerateMyself, startingPos, my_rank);
     CALI_MARK_END(data_init);
 
     //Main Alg
@@ -287,22 +313,10 @@ int main (int argc, char *argv[])
     bool correct = verifyCorrect(sortedData, my_rank);
     CALI_MARK_END(correctness_check);
 
-    CALI_MARK_END(main);
-    if(correct){printf("All is good \n");}
-    else {printf("There is a problem with the sorting. Quitting...\n");}
-
-    string inputType;
-    switch (sortingType) {
-    case 0:
-        inputType = "Randomized"
-        break;
-    case 1:
-        inputType = "Sorted"
-        break;
-    case 2:
-        inputType = "Reverse Sorted"
-        break;
-    }
+    CALI_MARK_END(mainFunction);
+    if(!correct){printf("There is a problem with the sorting. Quitting...\n");}
+    else {if(my_rank == 0){printf("\nAll data sorted correctly!");}}
+  
     adiak::init(NULL);
     adiak::launchdate();    // launch date of the job
     adiak::libraries();     // Libraries used
@@ -316,7 +330,7 @@ int main (int argc, char *argv[])
     adiak::value("InputType", inputType); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
     adiak::value("num_procs", numProcesses); // The number of processors (MPI ranks)
     adiak::value("group_num", 16); // The number of your group (integer, e.g., 1, 10)
-    adiak::value("implementation_source", "Handwritten & Online") // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
+    adiak::value("implementation_source", "Handwritten & Online"); // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
 
     // Flush Caliper output before finalizing MPI
    mgr.stop();
