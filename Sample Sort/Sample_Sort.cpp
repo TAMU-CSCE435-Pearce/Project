@@ -1,6 +1,8 @@
 #include "mpi.h"
 #include <vector>
 #include <stdlib.h>
+#include <stdio.h>
+#include <string>
 
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
@@ -95,7 +97,7 @@ void quickSort(int arr[], int start, int end)
 
 
 /* Main Alg */
-void sampleSort(vector<int> &localData, int my_rank) {
+void sampleSort(vector<int> &localData, vector<int> &sortedData, int my_rank) {
     /* Sample splitters */
     int numSplitters = 4;
     vector<int> sampledSplitters;
@@ -165,12 +167,29 @@ void sampleSort(vector<int> &localData, int my_rank) {
 
     /* Sort */
     quickSort(unsortedData, 0, myTotalSize-1);
+    sortedData.insert(sortedData.end(), &unsortedData[0], &unsortedData[myTotalSize]);
 }
 
 
-
 /* Verify */
+bool verifyCorrect(vector<int> &sortedData, int my_rank) {
+    //Verify local data is in order
+    for(int i = 1; i < sortedData.size()-1; i++) {
+        if(sortedData.at(i-1) > sortedData.at(i)) {printf("Sorting error on process with rank: %d\n", my_rank); return false;}
+    }
 
+    //Verify my start and end line up
+    int myDataBounds[] = {sortedData.at(0), sortedData.at(sortedData.size()-1)};
+    int boundsArraySize = 2*numProcesses;
+    int allDataBounds[boundsArraySize];
+    MPI_Allgather(&myDataBounds, 2, MPI_INT, &allDataBounds, 2, MPI_INT, MPI_COMM_WORLD);
+
+    for(int i = 1; i < boundsArraySize-1; i++) {
+        if(allDataBounds[i-1] > allDataBounds[i]) {printf("Sorting error on bounds regions: %d\n", my_rank); return false;}
+    }
+
+    return true;
+}
 
 
 /* Program Main */
@@ -228,16 +247,40 @@ int main (int argc, char *argv[])
     int startingPos = my_rank * (amountToGenerateMyself);
     generateData(myLocalData, sortingType, amountToGenerateMyself, startingPos);
 
-
     //Main Alg
-    sampleSort(myLocalData, my_rank);
-
-
+    vector<int> sortedData;
+    sampleSort(myLocalData, sortedData, my_rank);
 
     //Verification
+    bool correct = verifyCorrect(sortedData, my_rank);
+    if(correct){printf("All is good \n");}
+    else {printf("There is a problem with the sorting. Quitting...\n");}
 
-
-
+    string inputType;
+    switch (sortingType) {
+    case 0:
+        inputType = "Randomized"
+        break;
+    case 1:
+        inputType = "Sorted"
+        break;
+    case 2:
+        inputType = "Reverse Sorted"
+        break;
+    adiak::init(NULL);
+    adiak::launchdate();    // launch date of the job
+    adiak::libraries();     // Libraries used
+    adiak::cmdline();       // Command line used to launch the job
+    adiak::clustername();   // Name of the cluster
+    adiak::value("Algorithm", "SampleSort"); // The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
+    adiak::value("ProgrammingModel", "MPI"); // e.g., "MPI", "CUDA", "MPIwithCUDA"
+    adiak::value("Datatype", "int"); // The datatype of input elements (e.g., double, int, float)
+    adiak::value("SizeOfDatatype", sizeof(int)); // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
+    adiak::value("InputSize", inputSize); // The number of elements in input dataset (1000)
+    adiak::value("InputType", inputType); // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+    adiak::value("num_procs", numProcesses); // The number of processors (MPI ranks)
+    adiak::value("group_num", 16); // The number of your group (integer, e.g., 1, 10)
+    adiak::value("implementation_source", "Handwritten based on class discussions") // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
 
     // Flush Caliper output before finalizing MPI
    mgr.stop();
