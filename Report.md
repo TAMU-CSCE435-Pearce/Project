@@ -92,8 +92,8 @@ function parallel_merge_sort(arr, num_threads)
 
     return parallel_merge(left, right)
 ```
-### Algorithm 3: Quick Sort
 
+### Algorithm 3: Quick Sort
 ```
 int partition(int arr[], int low, int high) {
 
@@ -119,11 +119,12 @@ void quickSort(int arr[], int low, int high) {
   }
 }
 ```
+
 ### Algorithm 4: Sample Sort
   #### MPI
   ```
-  Sample 4 splitters
-  Send splitters to all processes using MPI_Allgather
+  Sample splitters on all processess
+  Send splitters to all other processes using MPI_Allgather
   Sort the splitters and decide upon bucket cutoffs
   Evaluate local elements and place into send buffers
   Calculate and communicate buffer sizes using MPI_Gather
@@ -134,6 +135,13 @@ void quickSort(int arr[], int low, int high) {
 
   #### CUDA
   ```
+  *All steps are performed with CUDA kernals with the expection of data transfer*
+  Sample and select splitters to use
+  Sort samples
+  Gather required info about each bucket
+  Group elements into buckets within an array
+  Sort the data within each bucket
+  Transfer data from GPU to CPU
   ```
 
 ## 2d. Citations
@@ -148,14 +156,9 @@ void quickSort(int arr[], int low, int high) {
 
 
 ## 2e. Evaluation plan - what and how will you measure and compare
-- Input sizes, Input types
-- Strong scaling (same problem size, increase number of processors/nodes)
-- Weak scaling (increase problem size, increase number of processors)
-- Number of threads in a block on the GPU 
-
 Each algorithm with be run with the input types of sorted, reverse sorted, and randomized. The input sizes are planned to be 2^16, 2^20, and 2^24.
 Both weak and strong scaling will be analyzed and compared against the other algorithms being tested.
-Block size will be... 
+The number of threads in a block on the GPU will be [64, 128, 512. 1024]. 
 
 
 ## 3. Project implementation
