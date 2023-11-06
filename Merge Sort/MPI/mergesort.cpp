@@ -122,24 +122,88 @@ void generateData(int *localData, int startingSortChoice, int amountToGenerate, 
     }
 }
 
+/*bool verifyCorrect(int *sortedData, int my_rank, int numProcesses)
+{
+    // Verify local data is in order
+    for (int i = 1; i < numProcesses; i++)
+    {
+        if (sortedData[i - 1] > sortedData[i])
+        {
+            printf("Sorting error on process with rank: %d\n", my_rank);
+            return false;
+        }
+    }
+
+    // Verify my start and end line up
+    int myDataBounds[] = {sortedData[0], sortedData[numProcesses - 1]};
+    int boundsArraySize = 2 * numProcesses;
+    int allDataBounds[boundsArraySize];
+    MPI_Allgather(&myDataBounds, 2, MPI_INT, &allDataBounds, 2, MPI_INT, MPI_COMM_WORLD);
+
+    for (int i = 1; i < boundsArraySize; i++)
+    {
+        if (allDataBounds[i - 1] > allDataBounds[i])
+        {
+            printf("Sorting error on bounds regions: %d\n", my_rank);
+            return false;
+        }
+    }
+
+    return true;
+}
+*/
+
 int main(int argc, char **argv)
 {
+    int sortingType, numProcesses, inputSize;
+
+    if (argc == 4)
+    {
+        sortingType = atoi(argv[1]);
+        numProcesses = atoi(argv[2]);
+        inputSize = atoi(argv[3]);
+    }
+    else
+    {
+        printf("\n Please ensure input is as follows [input sorted status (0-2)] [# processes] [size of input]");
+        return 0;
+    }
+
+    std::string inputType;
+    switch (sortingType)
+    {
+    case 0:
+    {
+        inputType = "Randomized";
+        break;
+    }
+    case 1:
+    {
+        inputType = "Sorted";
+        break;
+    }
+    case 2:
+    {
+        inputType = "Reverse Sorted";
+        break;
+    }
+    }
+
+    printf("\n\n");
 
     /********** Create and populate the array using generateData **********/
-    int n = atoi(argv[1]);
+    int n = inputSize;
     int *original_array = new int[n];
 
     int c;
     srand(time(NULL));
-    std::cout << "This is the unsorted array: ";
-    generateData(original_array, 0, n, 0, 0); // Generate data directly into original_array
+    std::cout << "This is the " << inputType << " array: ";
+    generateData(original_array, sortingType, n, 0, 0); // Generate data directly into original_array
 
     for (c = 0; c < n; c++)
     {
         std::cout << original_array[c] << " ";
     }
-
-    std::cout << "\n\n";
 
     /********** Initialize MPI **********/
     int world_rank;
@@ -186,6 +250,17 @@ int main(int argc, char **argv)
         }
 
         std::cout << "\n\n";
+
+        /*
+        if (verifyCorrect(sorted, world_rank, numProcesses))
+        {
+            std::cout << "Sorting verified.\n";
+        }
+        else
+        {
+            std::cout << "Sorting verification failed.\n";
+        }
+        */
 
         /********** Clean up root **********/
         delete[] sorted;
