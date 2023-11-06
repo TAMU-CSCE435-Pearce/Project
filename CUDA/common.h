@@ -12,3 +12,4 @@
 #define array_fill_name "array_fill"
 
 void bitonic_sort(float *values, float* dev_values, int NUM_VALS, int THREADS, int BLOCKS);
+void quicksort(float *values, float* dev_values, int NUM_VALS, int THREADS, int BLOCKS);
