@@ -95,7 +95,6 @@ int partition(int arr[], int start, int end)
 
 void quickSort(int arr[], int start, int end)
 {
- 
     // base case
     if (start >= end)
         return;
@@ -113,7 +112,7 @@ void quickSort(int arr[], int start, int end)
 /* Main Alg */
 void sampleSort(vector<int> &localData, vector<int> &sortedData, int my_rank) {
     /* Sample splitters */
-    int numSplitters = 4;
+    int numSplitters = 4; //# Sampled per node
     vector<int> sampledSplitters;
     srand(84723840);
     
