@@ -21,3 +21,4 @@ using namespace std;
 #define SELECTION_SORT_NAME "selection_sort"
 
 void sample_sort(int NUM_VALS, vector<float> *local_values, int local_size, int num_procs, int rank, int sample_size);
+void selection_sort(int NUM_VALS, vector<float> *local_values, int local_size, int num_procs, int rank, int sample_size);
