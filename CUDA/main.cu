@@ -79,23 +79,24 @@ int main(int argc, char *argv[])
     //MEM COPY FROM HOST TO DEVICE
 
     // Start host to device event
-    CALI_MARK_BEGIN(cudaMemcpy_host_to_device);
+    //CALI_MARK_BEGIN(cudaMemcpy_host_to_device);
 
     cudaMemcpy(dev_values, values, size, cudaMemcpyHostToDevice);
     cudaMemcpy(dev_sorted, &sorted, sizeof(int), cudaMemcpyHostToDevice);
 
     // End  host to device Event
     cudaDeviceSynchronize();
-    CALI_MARK_END(cudaMemcpy_host_to_device);
+    //CALI_MARK_END(cudaMemcpy_host_to_device);
 
     // Start Array Fill Event
-    CALI_MARK_BEGIN(array_fill_name);
+    //CALI_MARK_BEGIN(array_fill_name);
     srand(time(NULL));
-    device_array_fill<<<BLOCKS, THREADS>>>(dev_values, NUM_VALS, (unsigned long long)rand(), array_fill_type);
+    unsigned long long seed = 10; // (unsigned long long)rand()
+    device_array_fill<<<BLOCKS, THREADS>>>(dev_values, NUM_VALS, seed, array_fill_type);
 
     // End Array Fill Event
     cudaDeviceSynchronize();
-    CALI_MARK_END(array_fill_name);
+    //CALI_MARK_END(array_fill_name);
 
     if (sort_alg == 0)
     {
@@ -109,14 +110,14 @@ int main(int argc, char *argv[])
     //MEM COPY FROM DEVICE TO HOST
 
     // Start device to host event
-    CALI_MARK_BEGIN(cudaMemcpy_device_to_host);
+    //CALI_MARK_BEGIN(cudaMemcpy_device_to_host);
 
     cudaMemcpy(values, dev_values, size, cudaMemcpyDeviceToHost);
     cudaMemcpy(&sorted, dev_sorted, sizeof(int), cudaMemcpyDeviceToHost);
 
     // End device to host Event
     cudaDeviceSynchronize();
-    CALI_MARK_END(cudaMemcpy_device_to_host);
+    //CALI_MARK_END(cudaMemcpy_device_to_host);
 
     cudaFree(dev_values);
 
