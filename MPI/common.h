@@ -5,6 +5,7 @@
 #include <vector>
 #include <utility>
 #include <bits/stdc++.h> 
+#include <time.h>
 
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
@@ -17,5 +18,7 @@ using namespace std;
 #define ARRAY_FILL_NAME "array_fill"
 #define SORT_CHECK_NAME "sort_check"
 #define SAMPLE_SORT_NAME "sample_sort"
+#define SELECTION_SORT_NAME "selection_sort"
 
 void sample_sort(int NUM_VALS, vector<float> *local_values, int local_size, int num_procs, int rank, int sample_size);
+void selection_sort(int NUM_VALS, vector<float> *local_values, int local_size, int num_procs, int rank, int sample_size);
