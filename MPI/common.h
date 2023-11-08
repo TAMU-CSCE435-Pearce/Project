@@ -7,9 +7,9 @@
 #include <bits/stdc++.h> 
 #include <time.h>
 
-#include <caliper/cali.h>
-#include <caliper/cali-manager.h>
-#include <adiak.hpp>
+//#include <caliper/cali.h>
+//#include <caliper/cali-manager.h>
+//#include <adiak.hpp>
 
 using namespace std;
 
@@ -22,3 +22,4 @@ using namespace std;
 
 void sample_sort(int NUM_VALS, vector<float> *local_values, int local_size, int num_procs, int rank, int sample_size);
 void selection_sort(int NUM_VALS, vector<float> *local_values, int local_size, int num_procs, int rank, int sample_size);
+void oddeven_sort(int NUM_VALS, vector<float> *local_values, int local_size, int num_procs, int rank);

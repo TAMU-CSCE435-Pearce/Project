@@ -2,7 +2,7 @@
 
 void parallel_array_fill(int NUM_VALS, vector<float> *local_values, int local_size, int num_procs, int rank, int array_fill_type)
 {
-    CALI_MARK_BEGIN(ARRAY_FILL_NAME);
+    //CALI_MARK_BEGIN(ARRAY_FILL_NAME);
     int start = rank * local_size;
     int end = start + local_size - 1;
 
@@ -31,7 +31,7 @@ void parallel_array_fill(int NUM_VALS, vector<float> *local_values, int local_si
             local_values->push_back(NUM_VALS - end - i);
         }
     }
-    CALI_MARK_END(ARRAY_FILL_NAME);
+    //CALI_MARK_END(ARRAY_FILL_NAME);
 }
 
 bool sort_check(vector<float> local_values, int local_size)
@@ -48,7 +48,7 @@ bool sort_check(vector<float> local_values, int local_size)
 
 void parallel_sort_check_merged(int NUM_VALS, float *values, vector<float> local_values, int local_size, int num_procs, int rank)
 {
-    CALI_MARK_BEGIN(SORT_CHECK_NAME);
+    //CALI_MARK_BEGIN(SORT_CHECK_NAME);
     int start = rank * local_size;
     int end = start + local_size - 1;
 
@@ -87,12 +87,12 @@ void parallel_sort_check_merged(int NUM_VALS, float *values, vector<float> local
             printf("The entire array is not sorted.");
         }
     }
-    CALI_MARK_END(SORT_CHECK_NAME);
+    //CALI_MARK_END(SORT_CHECK_NAME);
 }
 
 void parallel_sort_check_unmerged(int NUM_VALS, vector<float> local_values, int local_size, int num_procs, int rank)
 {
-    CALI_MARK_BEGIN(SORT_CHECK_NAME);
+    //CALI_MARK_BEGIN(SORT_CHECK_NAME);
     int start = rank * local_size;
     int end = start + local_size - 1;
 
@@ -143,7 +143,7 @@ void parallel_sort_check_unmerged(int NUM_VALS, vector<float> local_values, int 
             printf("The entire array is not sorted.");
         }
     }
-    CALI_MARK_END(SORT_CHECK_NAME);
+    //CALI_MARK_END(SORT_CHECK_NAME);
 }
 
 void printArray(int NUM_VALS, float *values, vector<float> local_values, int local_size, int num_procs, int rank)
@@ -163,7 +163,7 @@ void printArray(int NUM_VALS, float *values, vector<float> local_values, int loc
 
 int main(int argc, char* argv[]) 
 {
-    CALI_CXX_MARK_FUNCTION;
+    //CALI_CXX_MARK_FUNCTION;
 
     int NUM_VALS = atoi(argv[1]);
     int array_fill_type = atoi(argv[2]);
@@ -197,7 +197,10 @@ int main(int argc, char* argv[])
     if (sort_alg == 0) {
         sample_sort(NUM_VALS, &local_values, local_size, num_procs, rank, 10);
     } else if (sort_alg == 1) {
-        selection_sort(NUM_VALS, &local_values, local_size, num_procs, rank, 10);
+        //selection_sort(NUM_VALS, &local_values, local_size, num_procs, rank, 10);
+    } else if (sort_alg == 2) {
+        //selection_sort(NUM_VALS, &local_values, local_size, num_procs, rank, 10);
+        oddeven_sort(NUM_VALS, &local_values, local_size, num_procs, rank);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
