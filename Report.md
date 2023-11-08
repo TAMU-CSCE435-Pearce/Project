@@ -39,36 +39,30 @@ begin BubbleSort(list)
 end BubbleSort
 ```
 
-
 ### Algorithm 2: Merge Sort
-Sequential:
-```python
-function merge(left, right):
-  result = []
-  i, j = 0, 0
-  while i < length(left) and j < length(right):
-    if left[i] < right[j]:
-      result.append(left[i])
-      i += 1
-    else:
-      result.append(right[j])
-      j += 1
+  #### MPI
+  ```
+  1. Distribute data among processes
+  2. Each process performs a local sequential merge sort
+  3. Pairwise merging of sorted sublists using MPI_Send and MPI_Recv
+  4. Recursively perform merging until the data is fully sorted
+  5. Verify correctness
+  ```
 
-  result += left[i:]
-  result += right[j:]
-  return result
+  #### CUDA
+  ```
+  1. Each CUDA thread loads a portion of the data into shared memory
+  2. Perform a local sequential merge sort within each thread's shared memory
+  3. Use CUDA parallel reduction to find the pivot elements
+  4. Broadcast to all threads
+  5. Each thread partitions its data around pivot
+  6. Calculate the offsets for each partition
+  7. CUDA scatter to move elements to their respective partitions
+  8. Recursively sort each partition using CUDA parallel sort
+  9. Perform parallel merge or merge in shared memory, depending on the size of the partitions
+  ```
 
-function mergeSort(x):
-  if length(x) <= 1:
-    return x
-
-  
-   middle = len(x)//2
-   left = mergeSort(x[:middle])
-   right = mergeSort(x[middle:])
-   return merge(left, right)
-```
-
+  #### Pseudocode
 Parallel:
 The following parallel Merge Sort algorithms will be implemented using MPI.
 ```python
@@ -92,6 +86,29 @@ function parallel_merge_sort(arr, num_threads)
 
     return parallel_merge(left, right)
 ```
+
+The following is pseudocode for a CUDA implementation
+``` c++
+__global__ void mergeCUDA(int* arr, int left, int mid, int right) {
+    // Sequential merge
+}
+
+__global__ void mergeSortParallelCUDA(int* arr, int size) {
+    if (size <= 1) return;
+
+    int mid = size / 2;
+
+    int* left = arr;
+    int* right = arr + mid;
+
+    mergeSortParallelCUDA<<<1, 1>>>(left, mid);
+    mergeSortParallelCUDA<<<1, 1>>>(right, size - mid);
+
+    mergeCUDA(arr, 0, mid - 1, size - 1);
+}
+
+```
+
 
 ### Algorithm 3: Quick Sort
 ```
@@ -152,13 +169,14 @@ void quickSort(int arr[], int low, int high) {
 - https://cse.buffalo.edu/faculty/miller/Courses/CSE702/Nicolas-Barrios-Fall-2021.pdf
 - https://en.wikipedia.org/wiki/Samplesort
 - https://www.geeksforgeeks.org/cpp-program-for-quicksort/#
+- https://pushkar2196.wordpress.com/2017/04/19/mergesort-cuda-implementation/
 
 
 
 ## 2e. Evaluation plan - what and how will you measure and compare
 Each algorithm with be run with the input types of sorted, reverse sorted, and randomized. The input sizes are planned to be 2^16, 2^20, and 2^24.
 Both weak and strong scaling will be analyzed and compared against the other algorithms being tested.
-The number of threads in a block on the GPU will be [64, 128, 512. 1024]. 
+The number of threads in a block on the GPU will be [64, 128, 512, 1024]. 
 
 
 ## 3. Project implementation
