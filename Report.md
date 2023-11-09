@@ -1,20 +1,31 @@
 # CSCE 435 Group project
 
+## 0. Group number: 13
+
 ## 1. Group members:
 1. Kyle Diano
 2. Connor Bowling
 3. Chris Anand
 4. Connor McLean
 
----
+## 2. Project topic: Parallel Sorting Algorithms Comparison
 
-## 2. _due 10/25_ Project topic
-Choose 3+ parallel sorting algorithms, implement in MPI and CUDA.  Examine and compare performance in detail (computation time, communication time, how much data is sent) on a variety of inputs: sorted, random, reverse, sorted with 1% perturbed, etc.  Strong scaling, weak scaling, GPU performance.
+### 2a. Brief project description
 
-Note: Team will communicate via *Slack*
+We will compare the performance of four parallel sorting algorithms implemented using MPI and CUDA. The algorithms to be compared are:
 
-## 2. _due 10/25_ Brief project description (what algorithms will you be comparing and on what architectures)
-- Parallel Bitonic Sort on a Hypercube (MPI + CUDA)
+- Parallel Bitonic Sort
+- Parallel Mergesort
+- Parallel Odd-Even Transposition Sort
+- Parallel Sample Sort
+
+Each of these algorithms will be assessed on multi-core CPU architectures using MPI and on NVIDIA GPUs using CUDA.
+
+### 2b. Pseudocode for each parallel algorithm
+
+- For **Parallel Bitonic Sort**:
+  - MPI: We will use `MPI_Send` and `MPI_Recv` for comparison exchanges between processes.
+  - CUDA: The compare-exchange operations will be performed in a CUDA kernel, with data transfer to/from the GPU occurring before and after the sort.
 
 ```
 procedure BITONIC_SORT(label, d)
@@ -30,9 +41,9 @@ begin
 end BITONIC_SORT
 ```
 
-pseudocode from slides
-
-- Parallel Mergesort (MPI + CUDA)
+- For **Parallel Mergesort**:
+  - MPI: Data partitioning and merging will involve `MPI_Scatterv` and `MPI_Gatherv`.
+  - CUDA: Sorting within each partition will be handled by a CUDA kernel.
 
 ```
 procedure PARALLEL MERGE SORT(id, n, data, newdata)
@@ -46,9 +57,9 @@ begin
 end PARALLEL MERGE SORT
 ```
 
-pseudocode (slightly modified) from [tutorialspoint](https://www.tutorialspoint.com/parallel_algorithm/parallel_algorithm_sorting.htm)
-
-- Parallel Odd-Even Transposition Sort (MPI + CUDA)
+- For **Parallel Odd-Even Transposition Sort**:
+  - MPI: The compare-exchange operations will involve `MPI_Sendrecv` for pairwise comparison exchanges.
+  - CUDA: Sorting steps will be carried out within CUDA kernels, with the necessary data shuttling to/from the GPU.
 
 ```
 procedure ODD-EVEN PAR(n)
@@ -72,4 +83,36 @@ begin
 end ODD-EVEN PAR
 ```
 
-pseudocode from slides
+- For **Parallel Sample Sort**:
+  - MPI: We will use `MPI_Gather` to collect samples, and MPI_Bcast for broadcasting splitters.
+  - CUDA: Local sorting and data assignment to buckets will be done with CUDA kernels.
+
+```
+procedure PARALLEL_SAMPLE_SORT(id, p, data)
+begin
+    localData := sort(data)
+    samples := select_samples(localData, p-1)
+    allSamples := gather_samples(samples)
+    
+    if id = 0 then
+        sortedSamples := sort(allSamples)
+        splitters := select_splitters(sortedSamples, p-1)
+    end if
+    
+    splitters := broadcast(splitters)
+    bucketedData := assign_to_buckets(localData, splitters)
+    
+    exchangedData := exchange_data(bucketedData, id, p)
+    sortedExchangedData := sort(exchangedData)
+    
+    return sortedExchangedData
+end procedure
+```
+
+### 2c. Evaluation plan
+We will measure and compare the following for each algorithm:
+- **Input sizes**: Ranging from 2^10 to 2^24 elements.
+- **Input types**: Sorted, random, reverse, and sorted with 1% perturbed.
+- **Strong scaling**: We will evaluate how the performance improves as we increase the number of processors/nodes while keeping the problem size constant.
+- **Weak scaling**: We will assess how the performance changes as we scale the problem size along with the number of processors.
+- **Number of threads in a block on the GPU**: Ranging from 2^4 to 2^10.
