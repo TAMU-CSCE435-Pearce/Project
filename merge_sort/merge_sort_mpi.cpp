@@ -7,21 +7,21 @@
 #include <adiak.hpp>
 
 // Generate data
-void generate_data(size_t size, int *data)
-{
+void generate_data(size_t size, int *data) {
     for (size_t i = 0; i < size; i++)
     {
         data[i] = rand() % (size * 10);
     }
 }
 
-void mergeSort(int *array, int *temp, int left, int right) {
-    if (left < right) {
-        int middle = (left+right)/2;
-        mergeSort(array, temp, left, middle);
-        mergeSort(array, temp, (middle+1), right);
-        merge(array, temp, left, right, middle);
+// Correctness check
+bool is_correct(size_t size, int *data) {
+    for (size_t i = 1; i < size; i++) {
+        if (data[i - 1] > data[i]) {
+            return false;
+        }
     }
+    return true;
 }
 
 void merge(int *array, int *temp, int left, int right, int middle) {
@@ -31,6 +31,8 @@ void merge(int *array, int *temp, int left, int right, int middle) {
     int k;
 
     // Sort left and right side of array into temp
+    CALI_MARK_BEGIN("comp");
+    CALI_MARK_BEGIN("comp_large");
     while ((left_idx <= middle) && (right_idx <= right)) {
         if (array[left_idx] <= array[right_idx]) {
             temp[merged_idx] = array[left_idx];
@@ -41,6 +43,8 @@ void merge(int *array, int *temp, int left, int right, int middle) {
         }
         merged_idx++;
     }
+    CALI_MARK_END("comp_large");
+    CALI_MARK_END("comp");
 
     // Copy remaining elements into temp array
     if (left_idx > middle) {
@@ -58,6 +62,28 @@ void merge(int *array, int *temp, int left, int right, int middle) {
     // Put sorted temp back into array
     for (k=left; k<=right; k++) {
         array[k] = temp[k];
+    }
+}
+
+void mergeSort(int *array, int *temp, int left, int right) {
+    if (left < right) {
+        int middle = (left+right)/2;
+        mergeSort(array, temp, left, middle);
+        mergeSort(array, temp, middle+1, right);
+        merge(array, temp, left, right, middle);
+    }
+}
+
+void finalMerge(int *array, int *temp, int left, int right, int num_sub_arrays) {
+    int middle = (left+right)/2;
+    if (num_sub_arrays != 2) {
+        //call final merge again
+        finalMerge(array, temp, left, middle, num_sub_arrays/2);
+        finalMerge(array, temp, middle+1, right, num_sub_arrays/2);
+        merge(array, temp, left, right, middle);
+    }
+    else {
+        merge(array, temp, left, right, middle);
     }
 }
 
@@ -82,7 +108,7 @@ int main(int argc, char **argv)
     adiak::cmdline();
     adiak::clustername();
 
-    std::string algorithm = "SampleSort";
+    std::string algorithm = "MergeSort";
     std::string programmingModel = "MPI";
     std::string datatype = "int";
     size_t sizeOfDatatype = sizeof(int);
@@ -103,19 +129,58 @@ int main(int argc, char **argv)
     CALI_MARK_BEGIN("main");
 
     // Generate Data
-    CALI_MARK_BEGIN("generate_data");
-    int *data = new int[inputSize];-
+    CALI_MARK_BEGIN("data_init");
+    int *data = new int[inputSize];
     generate_data(inputSize, data);
-    CALI_MARK_END("generate_data");
+    CALI_MARK_END("data_init");
 
     // Divide data into equal chunks then send to each process
+    CALI_MARK_BEGIN("comm");
+    CALI_MARK_BEGIN("comm_large");
     int sub_array_size = inputSize/num_procs;
     int *sub_array = new int[sub_array_size];
     MPI_Scatter(data, sub_array_size, MPI_INT, sub_array, sub_array_size, MPI_INT, 0, MPI_COMM_WORLD);
+    CALI_MARK_END("comm_large");
+    CALI_MARK_END("comm");
 
     // Merge sort
     int *temp_array = new int[sub_array_size];
-    mergeSort(sub_array, temp_array, 0, (sub_array_size-1))
+    mergeSort(sub_array, temp_array, 0, (sub_array_size-1));
+
+    // Gather sub arrays
+    CALI_MARK_BEGIN("comm");
+    CALI_MARK_BEGIN("comm_large");
+    int *sorted_array = NULL;
+    if (rank == 0) {
+        sorted_array = new int[inputSize];
+    }
+    MPI_Gather(sub_array, sub_array_size, MPI_INT, sorted_array, sub_array_size, MPI_INT, 0, MPI_COMM_WORLD);
+    CALI_MARK_END("comm_large");
+    CALI_MARK_END("comm");
+
+    // Final merge
+    if (rank == 0) {
+        int *final_temp = new int[inputSize];
+        //mergeSort(sorted_array, final_temp, 0, inputSize-1);
+        finalMerge(sorted_array, final_temp, 0, inputSize-1, num_procs);
+
+        /*
+        int i = 0;
+        for (i=0; i<inputSize-1; i++) {
+            std::cout << sorted_array[i] << ", ";
+        }
+        std::cout << sorted_array[i] << "\n";
+        */
+
+        CALI_MARK_BEGIN("correctness_check");
+        bool correct = is_correct(inputSize, sorted_array);
+        CALI_MARK_END("correctness_check");
+
+        std::cout << "is_correct: " << correct;
+
+        delete [] sorted_array;
+        delete [] final_temp;
+    }
 
     // Clean memory
     delete [] data;
