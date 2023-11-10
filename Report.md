@@ -42,7 +42,7 @@ end BITONIC_SORT
 ```
 
 - For **Parallel Mergesort**:
-  - MPI: Data partitioning and merging will involve `MPI_Scatterv` and `MPI_Gatherv`.
+  - MPI: Data partitioning and merging will involve `MPI_Scatter` and `MPI_Gather`.
   - CUDA: Sorting within each partition will be handled by a CUDA kernel.
 
 ```
