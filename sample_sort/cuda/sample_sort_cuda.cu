@@ -59,7 +59,11 @@ __global__ void partition_data(int *data, int *splitters, int *buckets, int n, i
     if (idx < n)
     {
         int val = data[idx];
-        int bucket = thrust::lower_bound(thrust::seq, splitters, splitters + num_splitters, val) - splitters;
+        int bucket = 0;
+        while (bucket < num_splitters && val >= splitters[bucket])
+        {
+            bucket++;
+        }
         buckets[idx] = bucket;
     }
 }
@@ -93,12 +97,24 @@ __global__ void count_elements_and_prepare_gather(int *data, int *bucket_indices
 void sample_sort(int *h_data, size_t size)
 {
     // Allocate memory and copy data to the device
+    CALI_MARK_BEGIN("comm");
+    CALI_MARK_BEGIN("comm_large");
+    CALI_MARK_BEGIN("cudaMemcpy");
     thrust::device_vector<int> d_data(h_data, h_data + size);
+    CALI_MARK_END("cudaMemcpy");
+    CALI_MARK_END("comm_large");
+    CALI_MARK_END("comm");
 
     // Perform local sort on the device using Thrust
+    CALI_MARK_BEGIN("comp");
+    CALI_MARK_BEGIN("comp_large");
     thrust::sort(d_data.begin(), d_data.end());
+    CALI_MARK_END("comp_large");
+    CALI_MARK_END("comp");
 
     // Determine the number of samples to pick
+    CALI_MARK_BEGIN("comp");
+    CALI_MARK_BEGIN("comp_small");
     int num_samples = sqrt(size);
     int stride = size / num_samples;
     thrust::device_vector<int> d_samples(num_samples);
@@ -110,8 +126,6 @@ void sample_sort(int *h_data, size_t size)
     // Use a kernel to pick splitters from the sorted data
     pick_samples<<<blocks, threadsPerBlock>>>(thrust::raw_pointer_cast(d_data.data()),
                                               thrust::raw_pointer_cast(d_samples.data()), stride, num_samples);
-
-    // Wait for the GPU to finish before continuing
     cudaDeviceSynchronize();
 
     // Sort the samples on the device to get splitters
@@ -127,8 +141,6 @@ void sample_sort(int *h_data, size_t size)
     partition_data<<<blocks, threadsPerBlock>>>(thrust::raw_pointer_cast(d_data.data()),
                                                 thrust::raw_pointer_cast(d_splitters.data()),
                                                 thrust::raw_pointer_cast(d_buckets.data()), size, num_samples - 1);
-
-    // Wait for the GPU to finish before continuing
     cudaDeviceSynchronize();
 
     // Count elements per bucket and prepare for gathering
@@ -140,23 +152,23 @@ void sample_sort(int *h_data, size_t size)
                                                                    thrust::raw_pointer_cast(d_bucket_counts.data()),
                                                                    thrust::raw_pointer_cast(d_gather_indices.data()),
                                                                    size);
-
-    // Wait for the GPU to finish counting
     cudaDeviceSynchronize();
 
     // Compute the starting indices of each bucket
     thrust::device_vector<int> d_bucket_starts(num_samples, 0);
     thrust::exclusive_scan(d_bucket_counts.begin(), d_bucket_counts.end(), d_bucket_starts.begin());
+    CALI_MARK_END("comp_small");
+    CALI_MARK_END("comp");
 
     // Scatter the elements into their correct positions
+    CALI_MARK_BEGIN("comp");
+    CALI_MARK_BEGIN("comp_large");
     thrust::device_vector<int> d_scattered_data(size);
     scatter_elements<<<blocks, threadsPerBlock>>>(thrust::raw_pointer_cast(d_data.data()),
                                                   thrust::raw_pointer_cast(d_buckets.data()),
                                                   thrust::raw_pointer_cast(d_bucket_starts.data()),
                                                   thrust::raw_pointer_cast(d_scattered_data.data()),
                                                   size);
-
-    // Wait for the GPU to finish scattering
     cudaDeviceSynchronize();
 
     // Now each bucket in d_scattered_data can be sorted individually
@@ -170,9 +182,17 @@ void sample_sort(int *h_data, size_t size)
             thrust::sort(d_scattered_data.begin() + start_index, d_scattered_data.begin() + start_index + bucket_size);
         }
     }
+    CALI_MARK_END("comp_large");
+    CALI_MARK_END("comp");
 
     // Copy the sorted data back to host
+    CALI_MARK_BEGIN("comm");
+    CALI_MARK_BEGIN("comm_large");
+    CALI_MARK_BEGIN("cudaMemcpy");
     thrust::copy(d_scattered_data.begin(), d_scattered_data.end(), h_data);
+    CALI_MARK_END("cudaMemcpy");
+    CALI_MARK_END("comm_large");
+    CALI_MARK_END("comm");
 }
 
 int main(int argc, char **argv)

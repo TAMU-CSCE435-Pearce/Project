@@ -56,7 +56,9 @@ void sample_sort(std::vector<int> &data, int rank, int num_procs)
     {
         global_samples.resize((num_procs - 1) * num_procs);
     }
+    CALI_MARK_BEGIN("MPI_Gather");
     MPI_Gather(local_samples.data(), num_procs - 1, MPI_INT, global_samples.data(), num_procs - 1, MPI_INT, 0, MPI_COMM_WORLD);
+    CALI_MARK_END("MPI_Gather");
     CALI_MARK_END("comm_small");
     CALI_MARK_END("comm");
 
@@ -78,11 +80,15 @@ void sample_sort(std::vector<int> &data, int rank, int num_procs)
     // Broadcast splitters to all processes
     CALI_MARK_BEGIN("comm");
     CALI_MARK_BEGIN("comm_small");
+    CALI_MARK_BEGIN("MPI_Bcast");
     MPI_Bcast(splitters.data(), num_procs - 1, MPI_INT, 0, MPI_COMM_WORLD);
+    CALI_MARK_END("MPI_Bcast");
     CALI_MARK_END("comm_small");
     CALI_MARK_END("comm");
 
     // Bucket data based on splitters
+    CALI_MARK_BEGIN("comp");
+    CALI_MARK_BEGIN("comp_small");
     std::vector<std::vector<int>> buckets(num_procs);
     size_t idx = 0;
     for (int i = 0; i < num_procs; i++)
@@ -123,15 +129,19 @@ void sample_sort(std::vector<int> &data, int rank, int num_procs)
     }
 
     // Allocate space for the sorted data
-    int total_receive = data.size(); // Maximum possible size
+    int total_receive = data.size();
     std::vector<int> sorted_data(total_receive);
+    CALI_MARK_END("comp_small");
+    CALI_MARK_END("comp");
 
     // Communicate data between processes
     CALI_MARK_BEGIN("comm");
     CALI_MARK_BEGIN("comm_large");
+    CALI_MARK_BEGIN("MPI_Alltoall");
     MPI_Alltoall(send_counts.data(), 1, MPI_INT, receive_counts.data(), 1, MPI_INT, MPI_COMM_WORLD);
     MPI_Alltoallv(send_buffer.data(), send_counts.data(), send_displacements.data(), MPI_INT,
                   sorted_data.data(), receive_counts.data(), receive_displacements.data(), MPI_INT, MPI_COMM_WORLD);
+    CALI_MARK_END("MPI_Alltoall");
     CALI_MARK_END("comm_large");
     CALI_MARK_END("comm");
 
