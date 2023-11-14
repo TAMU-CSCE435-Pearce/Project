@@ -4,7 +4,7 @@
 #SBATCH --get-user-env=L         #Replicate login environment
 #
 ##NECESSARY JOB SPECIFICATIONS
-#SBATCH --job-name=JobName       #Set the job name to "JobName"
+#SBATCH --job-name=MPISampleSortJob       #Set the job name to "MPISampleSortJob"
 #SBATCH --time=00:30:00           #Set the wall clock limit
 #SBATCH --nodes=1               #Request nodes
 #SBATCH --mem=8G                 #Request GB per node 
@@ -16,12 +16,17 @@
 #
 ##First Executable Line
 #
-array_size=$1
-processes=$2
+input_type=$1
+size=$2
+processes=$3
+output_dir=$4
 
 module load intel/2020b       # load Intel software stack
 module load CMake/3.12.1
 
-CALI_CONFIG="spot(output=p${processes}-a${array_size}.cali, \
+# Ensure output directory exists
+mkdir -p ${output_dir}
+
+CALI_CONFIG="spot(output=${output_dir}/mpi-p${processes}-${input_type}-${size}.cali, \
     time.variance)" \
-mpirun -np $processes ./sample_sort_mpi $array_size
+mpirun -np $processes ./sample_sort_mpi $input_type $size

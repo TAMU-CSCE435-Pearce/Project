@@ -1,18 +1,64 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <cstdint>
+#include <random>
 #include "mpi.h"
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
 #include <adiak.hpp>
 
-// Generate data
-std::vector<int> generate_data(size_t size)
+// Function to generate sorted data
+std::vector<int> generate_sorted_data(size_t size)
 {
     std::vector<int> data(size);
-    for (size_t i = 0; i < size; i++)
+    for (size_t i = 0; i < size; ++i)
     {
-        data[i] = rand() % (size * 10);
+        data[i] = static_cast<int>(i);
+    }
+    return data;
+}
+
+// Function to generate reverse sorted data
+std::vector<int> generate_reverse_sorted_data(size_t size)
+{
+    std::vector<int> data(size);
+    for (size_t i = 0; i < size; ++i)
+    {
+        data[i] = static_cast<int>(size - i - 1);
+    }
+    return data;
+}
+
+// Function to generate random data
+std::vector<int> generate_random_data(size_t size)
+{
+    std::vector<int> data(size);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<std::int64_t> dis(0, static_cast<std::int64_t>(size) * 10);
+
+    for (size_t i = 0; i < size; ++i)
+    {
+        data[i] = static_cast<int>(dis(gen));
+    }
+    return data;
+}
+
+// Function to generate 1% perturbed data
+std::vector<int> generate_perturbed_data(size_t size)
+{
+    std::vector<int> data = generate_sorted_data(size);
+    size_t perturb_count = std::max(1UL, size / 100);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<std::int64_t> dis(0, static_cast<std::int64_t>(size) * 10);
+    std::uniform_int_distribution<size_t> index_dis(0, size - 1);
+
+    for (size_t i = 0; i < perturb_count; ++i)
+    {
+        data[index_dis(gen)] = static_cast<int>(dis(gen));
     }
     return data;
 }
@@ -162,11 +208,14 @@ void sample_sort(std::vector<int> &data, int rank, int num_procs)
 
 int main(int argc, char **argv)
 {
-    size_t inputSize;
-    if (argc > 1)
+    if (argc < 3)
     {
-        inputSize = std::stoi(argv[1]);
+        std::cerr << "Usage: " << argv[0] << " <inputType> <size>\n";
+        return 1;
     }
+
+    std::string inputType = argv[1];
+    size_t size = std::stoul(argv[2]);
 
     int num_procs, rank;
     MPI_Init(&argc, &argv);
@@ -183,24 +232,44 @@ int main(int argc, char **argv)
     std::string programmingModel = "MPI";
     std::string datatype = "int";
     size_t sizeOfDatatype = sizeof(int);
-    std::string inputType = "Random";
-    int group_number = 13;
-    std::string implementation_source = "AI";
+    int groupNumber = 13;
+    std::string implementationSource = "AI";
 
     adiak::value("Algorithm", algorithm);
     adiak::value("ProgrammingModel", programmingModel);
     adiak::value("Datatype", datatype);
     adiak::value("SizeOfDatatype", sizeOfDatatype);
-    adiak::value("InputSize", inputSize);
+    adiak::value("InputSize", size);
     adiak::value("InputType", inputType);
     adiak::value("num_procs", num_procs);
-    adiak::value("group_num", group_number);
-    adiak::value("implementation_source", implementation_source);
+    adiak::value("group_num", groupNumber);
+    adiak::value("implementationSource", implementationSource);
 
     CALI_MARK_BEGIN("main");
 
     CALI_MARK_BEGIN("data_init");
-    std::vector<int> data = generate_data(inputSize);
+    std::vector<int> data;
+    if (inputType == "Sorted")
+    {
+        data = generate_sorted_data(size);
+    }
+    else if (inputType == "ReverseSorted")
+    {
+        data = generate_reverse_sorted_data(size);
+    }
+    else if (inputType == "Random")
+    {
+        data = generate_random_data(size);
+    }
+    else if (inputType == "1%perturbed")
+    {
+        data = generate_perturbed_data(size);
+    }
+    else
+    {
+        std::cerr << "Invalid input type. Use 'Sorted', 'ReverseSorted', 'Random', or '1%perturbed'.\n";
+        return 1;
+    }
     CALI_MARK_END("data_init");
 
     sample_sort(data, rank, num_procs);

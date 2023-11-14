@@ -1,6 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <cstdint>
+#include <random>
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
 #include <adiak.hpp>
@@ -9,22 +11,57 @@
 #include <thrust/device_vector.h>
 #include <thrust/sort.h>
 
-// Global variables
-int THREADS;
-int BLOCKS;
-int NUM_VALS;
-
-const char *bitonic_sort_step_region = "bitonic_sort_step";
-const char *cudaMemcpy_host_to_device = "cudaMemcpy_host_to_device";
-const char *cudaMemcpy_device_to_host = "cudaMemcpy_device_to_host";
-
-// Generate data
-std::vector<int> generate_data(size_t size)
+// Function to generate sorted data
+std::vector<int> generate_sorted_data(size_t size)
 {
     std::vector<int> data(size);
-    for (size_t i = 0; i < size; i++)
+    for (size_t i = 0; i < size; ++i)
     {
-        data[i] = rand() % (size * 10);
+        data[i] = static_cast<int>(i);
+    }
+    return data;
+}
+
+// Function to generate reverse sorted data
+std::vector<int> generate_reverse_sorted_data(size_t size)
+{
+    std::vector<int> data(size);
+    for (size_t i = 0; i < size; ++i)
+    {
+        data[i] = static_cast<int>(size - i - 1);
+    }
+    return data;
+}
+
+// Function to generate random data
+std::vector<int> generate_random_data(size_t size)
+{
+    std::vector<int> data(size);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<std::int64_t> dis(0, static_cast<std::int64_t>(size) * 10);
+
+    for (size_t i = 0; i < size; ++i)
+    {
+        data[i] = static_cast<int>(dis(gen));
+    }
+    return data;
+}
+
+// Function to generate 1% perturbed data
+std::vector<int> generate_perturbed_data(size_t size)
+{
+    std::vector<int> data = generate_sorted_data(size);
+    size_t perturb_count = std::max(1UL, size / 100);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<std::int64_t> dis(0, static_cast<std::int64_t>(size) * 10);
+    std::uniform_int_distribution<size_t> index_dis(0, size - 1);
+
+    for (size_t i = 0; i < perturb_count; ++i)
+    {
+        data[index_dis(gen)] = static_cast<int>(dis(gen));
     }
     return data;
 }
@@ -94,7 +131,7 @@ __global__ void count_elements_and_prepare_gather(int *data, int *bucket_indices
 }
 
 // Sample sort host function
-void sample_sort(int *h_data, size_t size)
+void sample_sort(int *h_data, size_t size, int threadsPerBlock, int blocks)
 {
     // Allocate memory and copy data to the device
     CALI_MARK_BEGIN("comm");
@@ -119,10 +156,6 @@ void sample_sort(int *h_data, size_t size)
     int stride = size / num_samples;
     thrust::device_vector<int> d_samples(num_samples);
 
-    // Define grid and block sizes for CUDA kernels
-    int threadsPerBlock = 256;
-    int blocks = (num_samples + threadsPerBlock - 1) / threadsPerBlock;
-
     // Use a kernel to pick splitters from the sorted data
     pick_samples<<<blocks, threadsPerBlock>>>(thrust::raw_pointer_cast(d_data.data()),
                                               thrust::raw_pointer_cast(d_samples.data()), stride, num_samples);
@@ -137,7 +170,6 @@ void sample_sort(int *h_data, size_t size)
     thrust::device_vector<int> d_buckets(size);
 
     // Partition the data into buckets according to the splitters
-    blocks = (size + threadsPerBlock - 1) / threadsPerBlock;
     partition_data<<<blocks, threadsPerBlock>>>(thrust::raw_pointer_cast(d_data.data()),
                                                 thrust::raw_pointer_cast(d_splitters.data()),
                                                 thrust::raw_pointer_cast(d_buckets.data()), size, num_samples - 1);
@@ -146,7 +178,6 @@ void sample_sort(int *h_data, size_t size)
     // Count elements per bucket and prepare for gathering
     thrust::device_vector<int> d_bucket_counts(num_samples, 0);
     thrust::device_vector<int> d_gather_indices(size);
-    blocks = (size + threadsPerBlock - 1) / threadsPerBlock;
     count_elements_and_prepare_gather<<<blocks, threadsPerBlock>>>(thrust::raw_pointer_cast(d_data.data()),
                                                                    thrust::raw_pointer_cast(d_buckets.data()),
                                                                    thrust::raw_pointer_cast(d_bucket_counts.data()),
@@ -197,9 +228,20 @@ void sample_sort(int *h_data, size_t size)
 
 int main(int argc, char **argv)
 {
-    NUM_VALS = atoi(argv[1]);
-    THREADS = atoi(argv[2]);
-    BLOCKS = NUM_VALS / THREADS;
+    // Check for correct number of arguments
+    if (argc < 4)
+    {
+        std::cerr << "Usage: " << argv[0] << " <inputType> <size> <numThreads>\n";
+        return 1;
+    }
+
+    // Parse the command line arguments
+    std::string inputType = argv[1];
+    size_t size = std::stoul(argv[2]);
+    int numThreads = std::stoi(argv[3]);
+
+    int threadsPerBlock = 256;
+    int numBlocks = (size + threadsPerBlock - 1) / threadsPerBlock;
 
     adiak::init(NULL);
     adiak::launchdate();
@@ -211,7 +253,6 @@ int main(int argc, char **argv)
     std::string programmingModel = "CUDA";
     std::string datatype = "int";
     size_t sizeOfDatatype = sizeof(int);
-    std::string inputType = "Random";
     int group_number = 13;
     std::string implementation_source = "AI";
 
@@ -219,18 +260,41 @@ int main(int argc, char **argv)
     adiak::value("ProgrammingModel", programmingModel);
     adiak::value("Datatype", datatype);
     adiak::value("SizeOfDatatype", sizeOfDatatype);
-    adiak::value("InputSize", NUM_VALS);
+    adiak::value("InputSize", size);
     adiak::value("InputType", inputType);
+    adiak::value("num_threads", numThreads);
+    adiak::value("num_blocks", numBlocks);
     adiak::value("group_num", group_number);
     adiak::value("implementation_source", implementation_source);
 
     CALI_MARK_BEGIN("main");
 
     CALI_MARK_BEGIN("data_init");
-    std::vector<int> data = generate_data(NUM_VALS);
+    std::vector<int> data;
+    if (inputType == "Sorted")
+    {
+        data = generate_sorted_data(size);
+    }
+    else if (inputType == "ReverseSorted")
+    {
+        data = generate_reverse_sorted_data(size);
+    }
+    else if (inputType == "Random")
+    {
+        data = generate_random_data(size);
+    }
+    else if (inputType == "1%perturbed")
+    {
+        data = generate_perturbed_data(size);
+    }
+    else
+    {
+        std::cerr << "Invalid input type. Use 'Sorted', 'ReverseSorted', 'Random', or '1%perturbed'.\n";
+        return 1;
+    }
     CALI_MARK_END("data_init");
 
-    sample_sort(data.data(), data.size());
+    sample_sort(data.data(), data.size(), threadsPerBlock, numBlocks);
 
     CALI_MARK_BEGIN("correctness_check");
     bool correct = is_correct(data);
