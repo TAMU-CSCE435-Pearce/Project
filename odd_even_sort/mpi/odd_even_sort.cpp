@@ -20,6 +20,7 @@
 #include <mpi.h>
 #include <limits.h>
 #include <caliper/cali.h>
+#include <caliper/cali-manager.h>
 #include <adiak.hpp>
 
 const int RMAX = 100;
@@ -96,6 +97,10 @@ int main(int argc, char* argv[]) {
 
    CALI_MARK_END("main");
 
+   // Create caliper ConfigManager object
+   cali::ConfigManager mgr;
+   mgr.start();
+
    adiak::init(NULL);
    adiak::launchdate();
    adiak::libraries();
@@ -119,6 +124,11 @@ int main(int argc, char* argv[]) {
    adiak::value("num_procs", p);
    adiak::value("group_num", group_number);
    adiak::value("implementation_source", implementation_source);
+
+   // Flush Caliper output before finalizing MPI
+   mgr.stop();
+   mgr.flush();
+
    MPI_Finalize();
 
    return 0;

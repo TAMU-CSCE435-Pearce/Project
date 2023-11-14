@@ -19,8 +19,8 @@
 #
 ##First Executable Line
 
-num_threads=$1
-num_vals=$2
+num_vals=$1
+num_threads=$2
 #
 module load CUDA                #load CUDA module
 module load intel/2020b
@@ -29,4 +29,4 @@ module load GCCcore/7.3.0
 
 CALI_CONFIG="spot(output=t${num_threads}-v${num_vals}.cali), \
     cuda.gputime" \
-./odd_even $num_threads $num_vals
+./odd_even $num_vals $num_threads

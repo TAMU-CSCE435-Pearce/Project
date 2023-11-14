@@ -10,10 +10,10 @@
  *
  *  cuda_odd_even_sort.cu
  *
- * Usage: ./odd_even_sort <number of threads> <number of values>
+ * Usage: ./odd_even_sort <number of values> <number of threads>
  *
- *         - number of threads: Number of threads per block in CUDA
  *         - number of values: Total number of values to sort
+ *         - number of threads: Number of threads per block in CUDA
  *
  * This CUDA implementation is adapted to work on GPU devices,
  * performing the odd-even transposition sort algorithm in parallel.
@@ -38,14 +38,14 @@ void oddEvenSort(int* h_A, int n, int threads, int blocks);
 /*-------------------------------------------------------------------*/
 int main(int argc, char* argv[]) {
     if (argc != 3) {
-        printf("Usage: %s <number of threads> <number of values>\n", argv[0]);
+        printf("Usage: %s <number of values> <number of threads>\n", argv[0]);
         return 1;
     }
 
     CALI_MARK_BEGIN("main");
 
-    int threads = atoi(argv[1]);
-    int num_vals = atoi(argv[2]);
+    int num_vals = atoi(argv[1]);
+    int threads = atoi(argv[2]);
     int blocks = (num_vals + threads - 1) / threads;
 
     int* h_A = (int*) malloc(num_vals * sizeof(int));
