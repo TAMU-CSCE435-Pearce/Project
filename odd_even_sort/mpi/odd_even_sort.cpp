@@ -39,7 +39,7 @@ const char* ListTypeToString(ListType list_type) {
         case LIST_RANDOM: return "Random";
         case LIST_SORTED: return "Sorted";
         case LIST_REVERSE_SORTED: return "Reverse Sorted";
-        case LIST_PERTURBED: return "Perturbed";
+        case LIST_PERTURBED: return "1% Perturbed";
         default: return "Unknown";
     }
 }

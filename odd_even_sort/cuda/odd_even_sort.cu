@@ -10,15 +10,17 @@
  *
  *  cuda_odd_even_sort.cu
  *
- * Usage: ./odd_even_sort <number of values> <number of threads>
+ * Usage: ./odd_even_sort <number of values> <number of threads> <list type>
  *
  *         - number of values: Total number of values to sort
  *         - number of threads: Number of threads per block in CUDA
+ *         - list type: type of list to sort
  *
  * This CUDA implementation is adapted to work on GPU devices,
  * performing the odd-even transposition sort algorithm in parallel.
  */
 
+// #define OUTPUT
 #include <cuda.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,9 +28,16 @@
 #include <caliper/cali-manager.h>
 #include <adiak.hpp>
 
+typedef enum {
+    LIST_RANDOM,
+    LIST_SORTED,
+    LIST_REVERSE_SORTED,
+    LIST_PERTURBED
+} ListType;
+
 /* Local functions */
 void printArrayPortion(const int* arr, int size, const char* prefix);
-void generateData(int* arr, int size);
+void generateData(int* arr, int size, ListType listType);
 bool isSortedAndPrint(const int* arr, int size);
 
 /* Functions involving communication */
@@ -37,8 +46,8 @@ void oddEvenSort(int* h_A, int n, int threads, int blocks);
 
 /*-------------------------------------------------------------------*/
 int main(int argc, char* argv[]) {
-    if (argc != 3) {
-        printf("Usage: %s <number of values> <number of threads>\n", argv[0]);
+    if (argc != 4) {
+        printf("Usage: %s <number of values> <number of threads> <list type>\n", argv[0]);
         return 1;
     }
 
@@ -47,12 +56,22 @@ int main(int argc, char* argv[]) {
     int num_vals = atoi(argv[1]);
     int threads = atoi(argv[2]);
     int blocks = (num_vals + threads - 1) / threads;
+    ListType listType;
+
+    if (strcmp(argv[3], "r") == 0) listType = LIST_RANDOM;
+    else if (strcmp(argv[3], "s") == 0) listType = LIST_SORTED;
+    else if (strcmp(argv[3], "rs") == 0) listType = LIST_REVERSE_SORTED;
+    else if (strcmp(argv[3], "p") == 0) listType = LIST_PERTURBED;
+    else {
+        fprintf(stderr, "Invalid list type. Use 'r' for random, 's' for sorted, 'rs' for reverse sorted, or 'p' for perturbed.\n");
+        return 1;
+    }
 
     int* h_A = (int*) malloc(num_vals * sizeof(int));
 
     // Generate data
     CALI_MARK_BEGIN("data_init");
-    generateData(h_A, num_vals);
+    generateData(h_A, num_vals, listType);
     CALI_MARK_END("data_init");
 
 
@@ -93,7 +112,23 @@ int main(int argc, char* argv[]) {
     std::string programmingModel = "CUDA";
     std::string datatype = "int";
     size_t sizeOfDatatype = sizeof(int);
-    std::string inputType = "Random";
+
+    std::string inputType;
+    switch (listType) {
+        case LIST_RANDOM:
+            inputType = "Random";
+            break;
+        case LIST_SORTED:
+            inputType = "Sorted";
+            break;
+        case LIST_REVERSE_SORTED:
+            inputType = "Reverse Sorted";
+            break;
+        case LIST_PERTURBED:
+            inputType = "1% Perturbed";
+            break;
+    }
+
     int group_number = 13;
     std::string implementation_source = "AI";
 
@@ -204,13 +239,41 @@ void printArrayPortion(const int* arr, int size, const char* prefix) {
  * Input args: 
  *   - arr: array to fill with data
  *   - size: size of the array
+ *   - listType: type of array to generate
  */
-void generateData(int* arr, int size) {
+void generateData(int* arr, int size, ListType listType) {
     srand(time(NULL));
-    for (int i = 0; i < size; ++i) {
-        arr[i] = rand() % 100; // Generate random values
+    switch (listType) {
+        case LIST_RANDOM:
+            for (int i = 0; i < size; ++i) {
+                arr[i] = rand() % 100;
+            }
+            break;
+        case LIST_SORTED:
+            for (int i = 0; i < size; ++i) {
+                arr[i] = i;
+            }
+            break;
+        case LIST_REVERSE_SORTED:
+            for (int i = 0; i < size; ++i) {
+                arr[i] = size - i - 1;
+            }
+            break;
+        case LIST_PERTURBED:
+            for (int i = 0; i < size; ++i) {
+                arr[i] = i;
+            }
+            for (int i = 0; i < size / 100; ++i) {
+                int idx1 = rand() % size;
+                int idx2 = rand() % size;
+                int temp = arr[idx1];
+                arr[idx1] = arr[idx2];
+                arr[idx2] = temp;
+            }
+            break;
     }
 }
+
 
 /*-------------------------------------------------------------------
  * Function: isSortedAndPrint
