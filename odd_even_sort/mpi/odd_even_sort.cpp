@@ -14,6 +14,8 @@
  *                     (must be evenly divisible by p)
  *
  */
+
+// #define OUTPUT
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +27,23 @@
 
 const int RMAX = 100;
 
+typedef enum {
+    LIST_RANDOM,
+    LIST_SORTED,
+    LIST_REVERSE_SORTED,
+    LIST_PERTURBED
+} ListType;
+
+const char* ListTypeToString(ListType list_type) {
+    switch (list_type) {
+        case LIST_RANDOM: return "Random";
+        case LIST_SORTED: return "Sorted";
+        case LIST_REVERSE_SORTED: return "Reverse Sorted";
+        case LIST_PERTURBED: return "Perturbed";
+        default: return "Unknown";
+    }
+}
+
 /* Local functions */
 void Usage(char* program);
 void Print_list(int local_A[], int local_n, int rank);
@@ -32,12 +51,12 @@ void Merge_low(int local_A[], int temp_B[], int temp_C[],
          int local_n);
 void Merge_high(int local_A[], int temp_B[], int temp_C[],
         int local_n);
-void Generate_list(int local_A[], int local_n, int my_rank);
+void Generate_list(int local_A[], int local_n, int my_rank, ListType list_type);
 int  Compare(const void* a_p, const void* b_p);
 
 /* Functions involving communication */
 void Get_args(int argc, char* argv[], int* global_n_p, int* local_n_p,
-         int my_rank, int p, MPI_Comm comm);
+         ListType* list_type_p, int my_rank, int p, MPI_Comm comm);
 void Sort(int local_A[], int local_n, int my_rank,
          int p, MPI_Comm comm);
 void Odd_even_iter(int local_A[], int temp_B[], int temp_C[],
@@ -50,6 +69,7 @@ void Print_global_list(int local_A[], int local_n, int my_rank,
 void Check_sorted(int local_A[], int local_n, int my_rank,
          int p, MPI_Comm comm);
 
+
 /*-------------------------------------------------------------------*/
 int main(int argc, char* argv[]) {
    int my_rank, p;   // rank, number processes
@@ -57,6 +77,7 @@ int main(int argc, char* argv[]) {
    int global_n;     // number of elements in global list
    int local_n;      // number of elements in local list (process list)
    MPI_Comm comm;
+   ListType list_type;
 
    MPI_Init(&argc, &argv);
    comm = MPI_COMM_WORLD;
@@ -64,11 +85,11 @@ int main(int argc, char* argv[]) {
    MPI_Comm_rank(comm, &my_rank);
 
    CALI_MARK_BEGIN("main");
-   Get_args(argc, argv, &global_n, &local_n, my_rank, p, comm);
+   Get_args(argc, argv, &global_n, &local_n, &list_type, my_rank, p, comm);
    local_A = (int*) malloc(local_n*sizeof(int));
 
    CALI_MARK_BEGIN("data_init");
-   Generate_list(local_A, local_n, my_rank); // generate random list
+   Generate_list(local_A, local_n, my_rank, list_type); // generate random list
    CALI_MARK_END("data_init");
 
 #  ifdef OUTPUT
@@ -111,7 +132,7 @@ int main(int argc, char* argv[]) {
    std::string programmingModel = "MPI";
    std::string datatype = "int";
    size_t sizeOfDatatype = sizeof(int);
-   std::string inputType = "Random";
+   std::string inputType = ListTypeToString(list_type);
    int group_number = 13;
    std::string implementation_source = "Online";
 
@@ -137,32 +158,68 @@ int main(int argc, char* argv[]) {
 
 /*-------------------------------------------------------------------
  * Function:   Generate_list
- * Purpose:    Fill list with random ints
- * Input Args: local_n, my_rank
- * Output Arg: local_A
+ * Purpose:    Generate a list of integers based on the specified type.
+ *             The type of list generated can be random, sorted,
+ *             reverse sorted, or partially perturbed.
+ * Input args: local_n: the number of elements to generate for the local list,
+ *             my_rank: rank of the MPI process (used for setting the seed in random generation),
+ *             list_type: the type of list to generate, as defined in the ListType enum
+ * Output arg: local_A: the generated list of integers
+ * Note:       The range of integers generated is between 0 and RMAX-1.
+ *             For LIST_PERTURBED, 1% of the sorted list elements are randomly swapped.
  */
-void Generate_list(int local_A[], int local_n, int my_rank) {
-    int i;
+void Generate_list(int local_A[], int local_n, int my_rank, ListType list_type) {
+    srandom(my_rank + 1); // Set seed for random generator
 
-    srandom(my_rank+1);     // set seed for random generator
-    for (i = 0; i < local_n; i++)
-       local_A[i] = random() % RMAX;
+    switch (list_type) {
+        case LIST_RANDOM:
+            for (int i = 0; i < local_n; i++) {
+                local_A[i] = random() % RMAX;
+            }
+            break;
 
+        case LIST_SORTED:
+            for (int i = 0; i < local_n; i++) {
+                local_A[i] = i; // Or some function of i that is monotonically increasing
+            }
+            break;
+
+        case LIST_REVERSE_SORTED:
+            for (int i = 0; i < local_n; i++) {
+                local_A[i] = local_n - i - 1; // Or some function of i that is monotonically decreasing
+            }
+            break;
+
+        case LIST_PERTURBED:
+            // Start with a sorted list
+            for (int i = 0; i < local_n; i++) {
+                local_A[i] = i;
+            }
+            // Perturb 1% of the elements
+            for (int i = 0; i < local_n / 100; i++) {
+                int idx1 = random() % local_n;
+                int idx2 = random() % local_n;
+                int temp = local_A[idx1];
+                local_A[idx1] = local_A[idx2];
+                local_A[idx2] = temp;
+            }
+            break;
+    }
 }  /* Generate_list */
 
 
 /*-------------------------------------------------------------------
  * Function:  Usage
- * Purpose:   Print command line to start program
- * In arg:    program:  name of executable
+ * Purpose:   Print the command line usage to start the program,
+ *            including the list type options.
+ * In arg:    program: name of the executable
  * Note:      Purely local, run only by process 0;
  */
 void Usage(char* program) {
-   fprintf(stderr, "usage:  mpirun -np <p> %s <global_n>\n",
-       program);
-   fprintf(stderr, "   - p: the number of processes \n");
-   fprintf(stderr, "   - global_n: number of elements in global list");
-   fprintf(stderr, " (must be evenly divisible by p)\n");
+   fprintf(stderr, "usage:  mpirun -np <p> %s <global_n> <list_type>\n", program);
+   fprintf(stderr, "   - p: the number of processes\n");
+   fprintf(stderr, "   - global_n: number of elements in global list (must be evenly divisible by p)\n");
+   fprintf(stderr, "   - list_type: type of list to generate ('r' for Random, 's' for Sorted, 'rs' for Reverse Sorted, 'p' for Perturbed)\n");
    fflush(stderr);
 }  /* Usage */
 
@@ -173,16 +230,28 @@ void Usage(char* program) {
  * Input args:  argc, argv, my_rank, p, comm
  * Output args: global_n_p, local_n_p,
  */
-void Get_args(int argc, char* argv[], int* global_n_p, int* local_n_p, 
-         int my_rank, int p, MPI_Comm comm) {
+void Get_args(int argc, char* argv[], int* global_n_p, int* local_n_p,
+         ListType* list_type_p, int my_rank, int p, MPI_Comm comm) {
 
    if (my_rank == 0) {
 	  // argument for number elements in global list
-      if (argc != 2) {
+      if (argc != 3) {
          Usage(argv[0]);
          *global_n_p = -1;  /* Bad args, quit */
       } else {
         *global_n_p = atoi(argv[1]);
+
+         // Map string to enum
+         if (strcmp(argv[2], "r") == 0) {
+               *list_type_p = LIST_RANDOM;
+         } else if (strcmp(argv[2], "s") == 0) {
+               *list_type_p = LIST_SORTED;
+         } else if (strcmp(argv[2], "rs") == 0) {
+               *list_type_p = LIST_REVERSE_SORTED;
+         } else if (strcmp(argv[2], "p") == 0) {
+               *list_type_p = LIST_PERTURBED;
+         }
+
         // number of elements must be divisible by number of processes
         if (*global_n_p % p != 0) {
             Usage(argv[0]);
@@ -216,6 +285,7 @@ void Get_args(int argc, char* argv[], int* global_n_p, int* local_n_p,
 
 }  /* Get_args */
 
+
 /*-------------------------------------------------------------------
  * Function:   Print_global_list
  * Purpose:    Print the contents of the global list A
@@ -245,6 +315,7 @@ void Print_global_list(int local_A[], int local_n, int my_rank, int p,
 
 }  /* Print_global_list */
 
+
 /*-------------------------------------------------------------------
  * Function:    Compare
  * Purpose:     Compare 2 ints, return -1, 0, or 1, respectively, when
@@ -262,6 +333,7 @@ int Compare(const void* a_p, const void* b_p) {
    else /* a > b */
       return 1;
 }  /* Compare */
+
 
 /*-------------------------------------------------------------------
  * Function:    Sort
@@ -400,6 +472,7 @@ void Merge_low(int local_A[], int temp_B[], int temp_C[],
    CALI_MARK_END("comp");
 }  /* Merge_low */
 
+
 /*-------------------------------------------------------------------
  * Function:    Merge_high
  * Purpose:     Merge the largest local_n elements in local_A
@@ -449,6 +522,7 @@ void Print_list(int local_A[], int local_n, int rank) {
    printf("\n");
 }  /* Print_list */
 
+
 /*-------------------------------------------------------------------
  * Function:   Print_local_lists
  * Purpose:    Print each process' current list contents
@@ -475,6 +549,7 @@ void Print_local_lists(int local_A[], int local_n,
       MPI_Send(local_A, local_n, MPI_INT, 0, 0, comm);
    }
 }  /* Print_local_lists */
+
 
 /*-------------------------------------------------------------------
  * Function:    Check_sorted
