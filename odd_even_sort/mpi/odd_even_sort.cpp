@@ -84,6 +84,14 @@ int main(int argc, char* argv[]) {
    MPI_Comm_size(comm, &p);
    MPI_Comm_rank(comm, &my_rank);
 
+   if(my_rank == 0) {
+      printf("Input Arguments:\n");
+      printf("processes:%d\n", p);
+      for (int i = 0; i < argc; i++) {
+         printf("argv[%d] = %s\n", i, argv[i]);
+      }
+   }
+
    CALI_MARK_BEGIN("main");
    Get_args(argc, argv, &global_n, &local_n, &list_type, my_rank, p, comm);
    local_A = (int*) malloc(local_n*sizeof(int));
