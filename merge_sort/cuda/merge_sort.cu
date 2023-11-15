@@ -191,15 +191,27 @@ int main(int argc, char **argv)
     generate_data(NUM_VALS, h_data);
     CALI_MARK_END("data_init");
 
-    // Cuda overhead
+    // Send data to device
     cudaMalloc((void **)&d_data, d_size);
+    CALI_MARK_BEGIN("comm");
+    CALI_MARK_BEGIN("comm_large");
     cudaMemcpy(d_data, h_data, d_size, cudaMemcpyHostToDevice);
+    CALI_MARK_END("comm_large");
+    CALI_MARK_END("comm");
 
     // Merge sort
+    CALI_MARK_BEGIN("comp");
+    CALI_MARK_BEGIN("comp_large");
     mergeSortKernel<<<BLOCKS, 1>>>(d_data, NUM_VALS);
+    CALI_MARK_END("comp_large");
+    CALI_MARK_END("comp");
 
     // Get data from device
+    CALI_MARK_BEGIN("comm");
+    CALI_MARK_BEGIN("comm_large");
     cudaMemcpy(h_data, d_data, d_size, cudaMemcpyDeviceToHost);
+    CALI_MARK_END("comm_large");
+    CALI_MARK_END("comm");
 
     // Final merge
     int *temp = (int*) malloc(NUM_VALS * sizeof(int));
