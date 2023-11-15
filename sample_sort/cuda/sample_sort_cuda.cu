@@ -8,14 +8,29 @@
 #include <adiak.hpp>
 #include <cuda_runtime.h>
 #include <cuda.h>
+
 #include <thrust/device_vector.h>
+#include <thrust/copy.h>
 #include <thrust/sort.h>
+#include <thrust/sequence.h>
+#include <thrust/execution_policy.h>
+#include <thrust/count.h>
+#include <thrust/transform.h>
+#include <thrust/gather.h>
+#include <thrust/scatter.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <cmath>
+
+// Global variables
+int THREADS;
+int BLOCKS;
+size_t NUM_VALS;
 
 // Function to generate sorted data
-std::vector<int> generate_sorted_data(size_t size)
+std::vector<int> generate_sorted_data()
 {
-    std::vector<int> data(size);
-    for (size_t i = 0; i < size; ++i)
+    std::vector<int> data(NUM_VALS);
+    for (size_t i = 0; i < NUM_VALS; ++i)
     {
         data[i] = static_cast<int>(i);
     }
@@ -23,25 +38,25 @@ std::vector<int> generate_sorted_data(size_t size)
 }
 
 // Function to generate reverse sorted data
-std::vector<int> generate_reverse_sorted_data(size_t size)
+std::vector<int> generate_reverse_sorted_data()
 {
-    std::vector<int> data(size);
-    for (size_t i = 0; i < size; ++i)
+    std::vector<int> data(NUM_VALS);
+    for (size_t i = 0; i < NUM_VALS; ++i)
     {
-        data[i] = static_cast<int>(size - i - 1);
+        data[i] = static_cast<int>(NUM_VALS - i - 1);
     }
     return data;
 }
 
 // Function to generate random data
-std::vector<int> generate_random_data(size_t size)
+std::vector<int> generate_random_data()
 {
-    std::vector<int> data(size);
+    std::vector<int> data(NUM_VALS);
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<std::int64_t> dis(0, static_cast<std::int64_t>(size) * 10);
+    std::uniform_int_distribution<std::int64_t> dis(0, static_cast<std::int64_t>(NUM_VALS) * 10);
 
-    for (size_t i = 0; i < size; ++i)
+    for (size_t i = 0; i < NUM_VALS; ++i)
     {
         data[i] = static_cast<int>(dis(gen));
     }
@@ -49,15 +64,15 @@ std::vector<int> generate_random_data(size_t size)
 }
 
 // Function to generate 1% perturbed data
-std::vector<int> generate_perturbed_data(size_t size)
+std::vector<int> generate_perturbed_data()
 {
-    std::vector<int> data = generate_sorted_data(size);
-    size_t perturb_count = std::max(1UL, size / 100);
+    std::vector<int> data = generate_sorted_data();
+    size_t perturb_count = std::max(1UL, NUM_VALS / 100);
 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<std::int64_t> dis(0, static_cast<std::int64_t>(size) * 10);
-    std::uniform_int_distribution<size_t> index_dis(0, size - 1);
+    std::uniform_int_distribution<std::int64_t> dis(0, static_cast<std::int64_t>(NUM_VALS) * 10);
+    std::uniform_int_distribution<size_t> index_dis(0, NUM_VALS - 1);
 
     for (size_t i = 0; i < perturb_count; ++i)
     {
@@ -79,61 +94,47 @@ bool is_correct(const std::vector<int> &data)
     return true;
 }
 
-// CUDA kernel to pick samples from the sorted subarrays
-__global__ void pick_samples(const int *data, int *samples, int stride, int num_samples)
+__global__ void selectSamplesKernel(int *d_data, int *d_samples, size_t group_size, size_t samples_per_group, int blocks)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < num_samples)
+    if (idx < blocks)
     {
-        samples[idx] = data[idx * stride];
-    }
-}
-
-// CUDA kernel to partition data based on splitters
-__global__ void partition_data(int *data, int *splitters, int *buckets, int n, int num_splitters)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < n)
-    {
-        int val = data[idx];
-        int bucket = 0;
-        while (bucket < num_splitters && val >= splitters[bucket])
+        for (size_t j = 0; j < samples_per_group; ++j)
         {
-            bucket++;
+            size_t sample_idx = idx * group_size + j * (group_size / samples_per_group);
+            d_samples[idx * samples_per_group + j] = d_data[sample_idx];
         }
-        buckets[idx] = bucket;
     }
 }
 
-// CUDA kernel to scatter elements into their correct positions
-__global__ void scatter_elements(int *data, int *bucket_indices, int *bucket_start_indices, int *scattered_data, int n)
+__global__ void assignToBucketsKernel(int *d_data, int *d_buckets, int *d_splitters, int num_splitters, size_t size)
 {
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-    if (index < n)
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size)
     {
-        int bucket_index = bucket_indices[index];
-        int pos = atomicAdd(&bucket_start_indices[bucket_index], 1);
-        scattered_data[pos] = data[index];
+        int data_val = d_data[idx];
+        int bucket_id = 0;
+
+        for (int i = 0; i < num_splitters; ++i)
+        {
+            if (data_val >= d_splitters[i])
+            {
+                bucket_id = i + 1;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        d_buckets[idx] = bucket_id;
     }
 }
 
-// CUDA kernel to count elements per bucket and initialize gather indices
-__global__ void count_elements_and_prepare_gather(int *data, int *bucket_indices, int *bucket_counts, int *gather_indices, int n)
+// Sample sort function
+void sample_sort(int *h_data, size_t size)
 {
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-    if (index < n)
-    {
-        int bucket_index = bucket_indices[index];
-        atomicAdd(&bucket_counts[bucket_index], 1);
-        // Initialize gather_indices with -1 or a marker value to indicate unprocessed elements
-        gather_indices[index] = -1;
-    }
-}
-
-// Sample sort host function
-void sample_sort(int *h_data, size_t size, int threadsPerBlock, int blocks)
-{
-    // Allocate memory and copy data to the device
+    // Copy data to device
     CALI_MARK_BEGIN("comm");
     CALI_MARK_BEGIN("comm_large");
     CALI_MARK_BEGIN("cudaMemcpy");
@@ -142,106 +143,120 @@ void sample_sort(int *h_data, size_t size, int threadsPerBlock, int blocks)
     CALI_MARK_END("comm_large");
     CALI_MARK_END("comm");
 
-    // Perform local sort on the device using Thrust
+    // 1. Split data into groups and sort each group
     CALI_MARK_BEGIN("comp");
     CALI_MARK_BEGIN("comp_large");
-    thrust::sort(d_data.begin(), d_data.end());
-    CALI_MARK_END("comp_large");
-    CALI_MARK_END("comp");
-
-    // Determine the number of samples to pick
-    CALI_MARK_BEGIN("comp");
-    CALI_MARK_BEGIN("comp_small");
-    int num_samples = sqrt(size);
-    int stride = size / num_samples;
-    thrust::device_vector<int> d_samples(num_samples);
-
-    // Use a kernel to pick splitters from the sorted data
-    pick_samples<<<blocks, threadsPerBlock>>>(thrust::raw_pointer_cast(d_data.data()),
-                                              thrust::raw_pointer_cast(d_samples.data()), stride, num_samples);
-    cudaDeviceSynchronize();
-
-    // Sort the samples on the device to get splitters
-    thrust::sort(d_samples.begin(), d_samples.end());
-    thrust::device_vector<int> d_splitters(num_samples - 1);
-    thrust::copy(d_samples.begin() + 1, d_samples.end(), d_splitters.begin());
-
-    // Allocate memory for buckets
-    thrust::device_vector<int> d_buckets(size);
-
-    // Partition the data into buckets according to the splitters
-    partition_data<<<blocks, threadsPerBlock>>>(thrust::raw_pointer_cast(d_data.data()),
-                                                thrust::raw_pointer_cast(d_splitters.data()),
-                                                thrust::raw_pointer_cast(d_buckets.data()), size, num_samples - 1);
-    cudaDeviceSynchronize();
-
-    // Count elements per bucket and prepare for gathering
-    thrust::device_vector<int> d_bucket_counts(num_samples, 0);
-    thrust::device_vector<int> d_gather_indices(size);
-    count_elements_and_prepare_gather<<<blocks, threadsPerBlock>>>(thrust::raw_pointer_cast(d_data.data()),
-                                                                   thrust::raw_pointer_cast(d_buckets.data()),
-                                                                   thrust::raw_pointer_cast(d_bucket_counts.data()),
-                                                                   thrust::raw_pointer_cast(d_gather_indices.data()),
-                                                                   size);
-    cudaDeviceSynchronize();
-
-    // Compute the starting indices of each bucket
-    thrust::device_vector<int> d_bucket_starts(num_samples, 0);
-    thrust::exclusive_scan(d_bucket_counts.begin(), d_bucket_counts.end(), d_bucket_starts.begin());
-    CALI_MARK_END("comp_small");
-    CALI_MARK_END("comp");
-
-    // Scatter the elements into their correct positions
-    CALI_MARK_BEGIN("comp");
-    CALI_MARK_BEGIN("comp_large");
-    thrust::device_vector<int> d_scattered_data(size);
-    scatter_elements<<<blocks, threadsPerBlock>>>(thrust::raw_pointer_cast(d_data.data()),
-                                                  thrust::raw_pointer_cast(d_buckets.data()),
-                                                  thrust::raw_pointer_cast(d_bucket_starts.data()),
-                                                  thrust::raw_pointer_cast(d_scattered_data.data()),
-                                                  size);
-    cudaDeviceSynchronize();
-
-    // Now each bucket in d_scattered_data can be sorted individually
-    for (int i = 0; i < num_samples; ++i)
+    size_t group_size = size / BLOCKS;
+    for (int i = 0; i < BLOCKS; ++i)
     {
-        int start_index = d_bucket_starts[i];
-        int bucket_size = (i == num_samples - 1) ? size - start_index : d_bucket_starts[i + 1] - start_index;
+        auto start_itr = d_data.begin() + i * group_size;
+        auto end_itr = (i != BLOCKS - 1) ? start_itr + group_size : d_data.end();
+        thrust::sort(thrust::device, start_itr, end_itr);
+    }
+    CALI_MARK_END("comp_large");
 
-        if (bucket_size > 0)
-        {
-            thrust::sort(d_scattered_data.begin() + start_index, d_scattered_data.begin() + start_index + bucket_size);
-        }
+    // 2. Select samples and sort them
+    CALI_MARK_BEGIN("comp_small");
+    size_t samples_per_group = static_cast<int>(size / sqrt(static_cast<double>(size)));
+    thrust::device_vector<int> d_samples(BLOCKS * samples_per_group);
+    selectSamplesKernel<<<BLOCKS, THREADS>>>(thrust::raw_pointer_cast(&d_data[0]), thrust::raw_pointer_cast(&d_samples[0]), group_size, samples_per_group, BLOCKS);
+    cudaDeviceSynchronize();
+    thrust::sort(thrust::device, d_samples.begin(), d_samples.end());
+    CALI_MARK_END("comp_small");
+
+    // 3. Determine splitters from sorted samples
+    int num_buckets = BLOCKS;
+    int num_splitters = num_buckets - 1;
+    thrust::device_vector<int> d_splitters(num_splitters);
+    CALI_MARK_BEGIN("comp_small");
+    for (int i = 0; i < num_splitters; ++i)
+    {
+        size_t splitter_idx = ((i + 1) * d_samples.size()) / num_buckets - 1;
+        d_splitters[i] = d_samples[splitter_idx];
+    }
+    CALI_MARK_END("comp_small");
+
+    // 4. Assign elements to buckets
+    CALI_MARK_BEGIN("comp_large");
+    thrust::device_vector<int> d_bucket_ids(size);
+    assignToBucketsKernel<<<(size + THREADS - 1) / THREADS, THREADS>>>(thrust::raw_pointer_cast(&d_data[0]), thrust::raw_pointer_cast(&d_bucket_ids[0]), thrust::raw_pointer_cast(&d_splitters[0]), num_splitters, size);
+    cudaDeviceSynchronize();
+    CALI_MARK_END("comp_large");
+
+    std::vector<thrust::device_vector<int>> buckets(num_buckets);
+
+    // Distribute elements into buckets
+    CALI_MARK_BEGIN("comp_large");
+    for (size_t idx = 0; idx < size; ++idx)
+    {
+        int bucket_id = d_bucket_ids[idx];
+        buckets[bucket_id].push_back(d_data[idx]);
+    }
+    CALI_MARK_END("comp_large");
+
+    // 5. Sort within each bucket
+    CALI_MARK_BEGIN("comp_large");
+    for (auto &bucket : buckets)
+    {
+        thrust::sort(thrust::device, bucket.begin(), bucket.end());
+    }
+
+    // Flatten buckets into d_data
+    auto d_data_itr = d_data.begin();
+    for (auto &bucket : buckets)
+    {
+        d_data_itr = thrust::copy(bucket.begin(), bucket.end(), d_data_itr);
     }
     CALI_MARK_END("comp_large");
     CALI_MARK_END("comp");
 
-    // Copy the sorted data back to host
+    // Copy sorted data back to host
     CALI_MARK_BEGIN("comm");
     CALI_MARK_BEGIN("comm_large");
-    CALI_MARK_BEGIN("cudaMemcpy");
-    thrust::copy(d_scattered_data.begin(), d_scattered_data.end(), h_data);
-    CALI_MARK_END("cudaMemcpy");
+    thrust::copy(d_data.begin(), d_data.end(), h_data);
     CALI_MARK_END("comm_large");
     CALI_MARK_END("comm");
 }
 
 int main(int argc, char **argv)
 {
+    CALI_MARK_BEGIN("main");
+
     // Check for correct number of arguments
     if (argc < 4)
     {
-        std::cerr << "Usage: " << argv[0] << " <inputType> <size> <numThreads>\n";
+        std::cerr << "Usage: " << argv[0] << " <size> <numThreads> <inputType>\n";
         return 1;
     }
 
     // Parse the command line arguments
-    std::string inputType = argv[1];
-    size_t size = std::stoul(argv[2]);
-    int numThreads = std::stoi(argv[3]);
+    NUM_VALS = std::stoul(argv[1]);
+    THREADS = std::stoi(argv[2]);
+    BLOCKS = (NUM_VALS + THREADS - 1) / THREADS;
+    std::string inputTypeShort = argv[3];
 
-    int threadsPerBlock = 256;
-    int numBlocks = (size + threadsPerBlock - 1) / threadsPerBlock;
+    std::string inputType;
+    if (inputTypeShort == "r")
+    {
+        inputType = "Random";
+    }
+    else if (inputTypeShort == "s")
+    {
+        inputType = "Sorted";
+    }
+    else if (inputTypeShort == "rs")
+    {
+        inputType = "Reverse Sorted";
+    }
+    else if (inputTypeShort == "p")
+    {
+        inputType = "1% Perturbed";
+    }
+    else
+    {
+        std::cerr << "Invalid input type. Use 'r', 's', 'rs', or 'p'.\n";
+        return 1;
+    }
 
     adiak::init(NULL);
     adiak::launchdate();
@@ -260,41 +275,44 @@ int main(int argc, char **argv)
     adiak::value("ProgrammingModel", programmingModel);
     adiak::value("Datatype", datatype);
     adiak::value("SizeOfDatatype", sizeOfDatatype);
-    adiak::value("InputSize", size);
+    adiak::value("InputSize", NUM_VALS);
     adiak::value("InputType", inputType);
-    adiak::value("num_threads", numThreads);
-    adiak::value("num_blocks", numBlocks);
+    adiak::value("num_threads", THREADS);
+    adiak::value("num_blocks", BLOCKS);
     adiak::value("group_num", group_number);
     adiak::value("implementation_source", implementation_source);
-
-    CALI_MARK_BEGIN("main");
 
     CALI_MARK_BEGIN("data_init");
     std::vector<int> data;
     if (inputType == "Sorted")
     {
-        data = generate_sorted_data(size);
+        data = generate_sorted_data();
     }
-    else if (inputType == "ReverseSorted")
+    else if (inputType == "Reverse Sorted")
     {
-        data = generate_reverse_sorted_data(size);
+        data = generate_reverse_sorted_data();
     }
     else if (inputType == "Random")
     {
-        data = generate_random_data(size);
+        data = generate_random_data();
     }
-    else if (inputType == "1%perturbed")
+    else if (inputType == "1% Perturbed")
     {
-        data = generate_perturbed_data(size);
+        data = generate_perturbed_data();
     }
     else
     {
-        std::cerr << "Invalid input type. Use 'Sorted', 'ReverseSorted', 'Random', or '1%perturbed'.\n";
+        std::cerr << "Invalid input type. Use 'Sorted', 'Reverse Sorted', 'Random', or '1% Perturbed'.\n";
         return 1;
     }
     CALI_MARK_END("data_init");
 
-    sample_sort(data.data(), data.size(), threadsPerBlock, numBlocks);
+    CALI_MARK_BEGIN("comm");
+    CALI_MARK_BEGIN("comm_small");
+    CALI_MARK_END("comm_small");
+    CALI_MARK_END("comm");
+
+    sample_sort(data.data(), data.size());
 
     CALI_MARK_BEGIN("correctness_check");
     bool correct = is_correct(data);

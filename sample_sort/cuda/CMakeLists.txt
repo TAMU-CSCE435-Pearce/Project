@@ -17,5 +17,7 @@ include_directories(${CUDA_INCLUDE_DIRS})
 include_directories(${caliper_INCLUDE_DIR})
 include_directories(${adiak_INCLUDE_DIRS})
 
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
+
 target_link_libraries(sample_sort_cuda PRIVATE MPI::MPI_CXX)
 target_link_libraries(sample_sort_cuda PRIVATE caliper)

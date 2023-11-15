@@ -19,9 +19,9 @@
 #
 ##First Executable Line
 
-input_type=$1
-size=$2
-threads=$3
+size=$1
+threads=$2
+input_type=$3
 output_dir=$4
 
 #
@@ -33,6 +33,6 @@ module load GCCcore/7.3.0
 # Ensure output directory exists
 mkdir -p ${output_dir}
 
-CALI_CONFIG="spot(output=${output_dir}/cuda-t${threads}-${input_type}-${size}.cali, \
+CALI_CONFIG="spot(output=${output_dir}/sample-cuda-t${threads}-v${size}-i${input_type}.cali, \
     time.variance)" \
-./sample_sort_cuda $input_type $size $threads
+./sample_sort_cuda $size $threads $input_type
