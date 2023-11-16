@@ -12,10 +12,34 @@ int BLOCKS;
 int NUM_VALS;  
 
 // Generate data
-void generate_data(size_t size, int *data) {
-    for (size_t i = 0; i < size; i++)
-    {
-        data[i] = rand() % (size * 10);
+void generate_data(size_t size, int *data, std::string gen_type) {
+    if (gen_type.compare("Random") == 0) {
+        for (size_t i = 0; i < size; i++) {
+            data[i] = rand() % (size * 10);
+        }
+    }
+    else if (gen_type.compare("Sorted") == 0) {
+        for (size_t i = 0; i < size; i++) {
+            data[i] = i;
+        }
+    }
+    else if (gen_type.compare("Reverse Sorted") == 0) {
+        for (size_t i = 0; i < size; i++) {
+            data[i] = size - i;
+        }
+    }
+    else if (gen_type.compare("1% Perturbed") == 0) {
+        for (size_t i = 0; i < size; i++) {
+            data[i] = i;
+        }
+        for (size_t i = 0; i < size/100; i++) {
+            int i1 = rand() % size;
+            int i2 = rand() % size;
+            
+            int temp = data[i1];
+            data[i1] = data[i2];
+            data[i2] = temp;
+        }
     }
 }
 
@@ -152,6 +176,23 @@ int main(int argc, char **argv)
     THREADS = atoi(argv[2]);
     BLOCKS = NUM_VALS / THREADS;
 
+    std::string gen_type;
+    if (strcmp(argv[2], "r") == 0) {
+        gen_type = "Random";
+    }
+    else if (strcmp(argv[2], "s") == 0) {
+        gen_type = "Sorted";
+    }
+    else if (strcmp(argv[2], "rs") == 0) {
+        gen_type = "Reverse Sorted";
+    }
+    else if (strcmp(argv[2], "p") == 0) {
+        gen_type = "1% Perturbed";
+    }
+    else {
+        return 1;
+    }
+
     printf("Number of threads: %d\n", THREADS);
     printf("Number of values: %d\n", NUM_VALS);
     printf("Number of blocks: %d\n", BLOCKS);
@@ -188,7 +229,7 @@ int main(int argc, char **argv)
     // Generate Data
     CALI_MARK_BEGIN("data_init");
     int *h_data = (int*) malloc(NUM_VALS * sizeof(int));
-    generate_data(NUM_VALS, h_data);
+    generate_data(NUM_VALS, h_data, gen_type);
     CALI_MARK_END("data_init");
 
     // Send data to device
