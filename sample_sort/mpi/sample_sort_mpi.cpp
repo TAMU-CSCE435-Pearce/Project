@@ -294,7 +294,7 @@ int main(int argc, char **argv)
     adiak::value("InputType", inputType);
     adiak::value("num_procs", num_procs);
     adiak::value("group_num", groupNumber);
-    adiak::value("implementationSource", implementationSource);
+    adiak::value("implementation_source", implementationSource);
 
     std::vector<int> data;
     if (rank == 0)
