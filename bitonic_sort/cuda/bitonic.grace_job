@@ -4,7 +4,7 @@
 #SBATCH --get-user-env=L         #Replicate login environment
 #
 ##NECESSARY JOB SPECIFICATIONS
-#SBATCH --job-name=JobName       #Set the job name to "JobName"
+#SBATCH --job-name=CUDABitonicSortJob       #Set the job name to "CUDABitonicSortJob"
 #SBATCH --time=0:30:00           #Set the wall clock limit to 0hr and 30min
 #SBATCH --ntasks=1               #Request tasks/cores per node
 #SBATCH --mem=8G                 #Request 8GB per node 
@@ -19,12 +19,18 @@
 #
 ##First Executable Line
 
-num_threads=$1
-num_vals=$2
+size=$1
+threads=$2
+input_type=$3
+output_dir=$4
+
 #
 module load CUDA                #load CUDA module
 module load GCCcore/7.3.0
 #
 
-CALI_CONFIG="spot(output=${num_threads}-${num_vals}.cali)" \
-./bitonic $num_threads $num_vals
+# Ensure output directory exists
+mkdir -p ${output_dir}
+
+CALI_CONFIG="spot(output=${output_dir}/bitonic-cuda-t${threads}-v${size}-i${input_type}.cali)" \
+./bitonic $size $threads $input_type

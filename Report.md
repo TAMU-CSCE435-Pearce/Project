@@ -159,3 +159,54 @@ end procedure
 
 #### Interpretation
 - Consistent execution times across different thread counts suggest that the GPU implementation is efficiently parallelized, handling larger problem sizes effectively without a significant rise in execution time.
+
+## Performance Analysis of Parallel Bitonic Sort
+
+### Strong Scaling Analysis for Bitonic Sort with CUDA
+![](./bitonic_sort/Bitonic%20Sort%20Strong%20Scaling%20CUDA.png)
+#### Graph Overview
+- The graph represents the average execution time for sorting a random input of size 65536 as the number of threads increases.
+
+#### Trends
+- Initial decrease in execution time as the number of threads increases from 75 to about 150.
+- Beyond 150 threads, the execution time starts to increase.
+
+#### Interpretation
+- The decrease suggests that additional threads initially lead to better parallelization.
+- The subsequent increase may be due to overhead or hardware limitations such as memory bandwidth or thread synchronization issues.
+
+### Strong Scaling Analysis for Bitonic Sort with MPI
+![](./bitonic_sort/Bitonic%20Sort%20Strong%20Scaling%20MPI.png)
+#### Graph Overview
+- Displays the average execution time for sorting a random input of size 65536 with an increasing number of processors.
+
+#### Trends
+- Significant reduction in execution time with an increase in processors up to 200.
+- Slow increase in execution time with more processors beyond this point.
+
+#### Interpretation
+- Sharp decrease followed by a gradual increase suggests that there is an optimal number of processors for parallelization, beyond which overhead costs reduce efficiency.
+
+### Weak Scaling Analysis for Bitonic Sort with CUDA
+![](./bitonic_sort/Bitonic%20Sort%20Weak%20Scaling%20CUDA.png)
+#### Graph Overview
+- Shows execution time while increasing the number of threads in a block and the problem size proportionally.
+
+#### Trends
+- Execution times remain flat across the range of threads for different problem sizes.
+
+#### Interpretation
+- The stable execution times regardless of the increased problem size indicate good weak scaling, with the algorithm effectively handling larger datasets with more threads.
+
+### Weak Scaling Analysis for Bitonic Sort with MPI
+![](./bitonic_sort/Bitonic%20Sort%20Weak%20Scaling%20MPI.png)
+#### Graph Overview
+- Indicates execution time as both the problem size (1 million elements per processor) and the number of processors increase.
+
+#### Trends
+- Gradual increase in execution time as more processors are added.
+
+#### Interpretation
+- The algorithm's parallel efficiency seems to decrease with scaling, likely due to communication costs or load imbalances at larger scales.
+
+Use this analysis to explore the Bitonic Sort algorithm's performance in both MPI and CUDA implementations, discussing potential reasons for the observed trends and considering improvements for efficiency.
