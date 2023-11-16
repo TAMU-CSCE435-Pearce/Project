@@ -6,11 +6,38 @@
 #include <caliper/cali-manager.h>
 #include <adiak.hpp>
 
+#define FROM_WORKER 2  
+#define MASTER 0   
+
 // Generate data
-void generate_data(size_t size, int *data) {
-    for (size_t i = 0; i < size; i++)
-    {
-        data[i] = rand() % (size * 10);
+void generate_data(size_t size, int *data, std::string gen_type) {
+    if (gen_type.compare("Random") == 0) {
+        for (size_t i = 0; i < size; i++) {
+            data[i] = rand() % (size * 10);
+        }
+    }
+    else if (gen_type.compare("Sorted") == 0) {
+        for (size_t i = 0; i < size; i++) {
+            data[i] = i;
+        }
+    }
+    else if (gen_type.compare("Reverse Sorted") == 0) {
+        for (size_t i = 0; i < size; i++) {
+            data[i] = size - i;
+        }
+    }
+    else if (gen_type.compare("1% Perturbed") == 0) {
+        for (size_t i = 0; i < size; i++) {
+            data[i] = i;
+        }
+        for (size_t i = 0; i < size/100; i++) {
+            int i1 = rand() % size;
+            int i2 = rand() % size;
+            
+            int temp = data[i1];
+            data[i1] = data[i2];
+            data[i2] = temp;
+        }
     }
 }
 
@@ -47,6 +74,8 @@ void merge(int *array, int *temp, int left, int right, int middle) {
     CALI_MARK_END("comp");
 
     // Copy remaining elements into temp array
+    CALI_MARK_BEGIN("comp");
+    CALI_MARK_BEGIN("comp_small");
     if (left_idx > middle) {
         for (k=right_idx; k<=right; k++) {
             temp[merged_idx] = array[k];
@@ -58,6 +87,8 @@ void merge(int *array, int *temp, int left, int right, int middle) {
             merged_idx++;
         }
     }
+    CALI_MARK_END("comp_small");
+    CALI_MARK_END("comp");
 
     // Put sorted temp back into array
     for (k=left; k<=right; k++) {
@@ -89,10 +120,29 @@ void finalMerge(int *array, int *temp, int left, int right, int num_sub_arrays) 
 
 int main(int argc, char **argv)
 {
+    int mtype;
+
     size_t inputSize;
     if (argc > 1)
     {
         inputSize = std::stoi(argv[1]);
+    }
+
+    std::string gen_type;
+    if (strcmp(argv[2], "r") == 0) {
+        gen_type = "Random";
+    }
+    else if (strcmp(argv[2], "s") == 0) {
+        gen_type = "Sorted";
+    }
+    else if (strcmp(argv[2], "rs") == 0) {
+        gen_type = "Reverse Sorted";
+    }
+    else if (strcmp(argv[2], "p") == 0) {
+        gen_type = "1% Perturbed";
+    }
+    else {
+        return 1;
     }
 
     int num_procs, rank;
@@ -101,6 +151,12 @@ int main(int argc, char **argv)
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    int is_master = (rank == 0) ? 1 : 0;
+    MPI_Comm new_comm;
+    MPI_Comm_split(MPI_COMM_WORLD, is_master, rank, &new_comm);
+
+    MPI_Status status;
 
     adiak::init(NULL);
     adiak::launchdate();
@@ -131,7 +187,7 @@ int main(int argc, char **argv)
     // Generate Data
     CALI_MARK_BEGIN("data_init");
     int *data = new int[inputSize];
-    generate_data(inputSize, data);
+    generate_data(inputSize, data, gen_type);
     CALI_MARK_END("data_init");
 
     // Divide data into equal chunks then send to each process
@@ -176,7 +232,7 @@ int main(int argc, char **argv)
         bool correct = is_correct(inputSize, sorted_array);
         CALI_MARK_END("correctness_check");
 
-        std::cout << "is_correct: " << correct;
+        std::cout << "is_correct: " << correct << "\n";
 
         delete [] sorted_array;
         delete [] final_temp;
@@ -188,6 +244,7 @@ int main(int argc, char **argv)
     delete [] temp_array;
 
     CALI_MARK_END("main");
+    MPI_Comm_free(&new_comm);
     MPI_Finalize();
     return 0;
 }
