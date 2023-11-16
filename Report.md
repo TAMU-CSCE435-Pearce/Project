@@ -109,10 +109,53 @@ begin
 end procedure
 ```
 
-### 2c. Evaluation plan
-We will measure and compare the following for each algorithm:
-- **Input sizes**: Ranging from 2^10 to 2^24 elements.
-- **Input types**: Sorted, random, reverse, and sorted with 1% perturbed.
-- **Strong scaling**: We will evaluate how the performance improves as we increase the number of processors/nodes while keeping the problem size constant.
-- **Weak scaling**: We will assess how the performance changes as we scale the problem size along with the number of processors.
-- **Number of threads in a block on the GPU**: Ranging from 2^4 to 2^10.
+## Performance Analysis of Parallel Sample Sort
+
+### Strong Scaling Analysis for SampleSort with MPI
+![](./sample_sort/Sample%20Sort%20Strong%20Scaling%20MPI.png)
+#### Graph Overview
+- The strong scaling graph for MPI displays the average execution time as the number of processors increases, with a fixed input size (626144).
+
+#### Trends
+- Ideally, the execution time should decrease as the number of processors increases.
+- The execution time for sorted, 1% perturbed, and random inputs decreases with more processors, indicating good scaling.
+- The reverse sorted input does not show a significant decrease in execution time, suggesting challenges in parallelization.
+
+#### Interpretation
+- The algorithm scales well with an increasing number of processors up to a point, after which the scaling benefits reduce, likely due to communication overhead or synchronization issues.
+
+### Strong Scaling Analysis for SampleSort with CUDA
+![](./sample_sort/Sample%20Sort%20Strong%20Scaling%20CUDA.png)
+#### Graph Overview
+- This graph illustrates how the execution time changes with an increasing number of threads in a block, keeping the input size constant.
+
+#### Trends
+- A sharp decrease in execution time is observed as threads increase up to around 600.
+- Beyond this point, the execution time stabilizes or slightly increases.
+
+#### Interpretation
+- Initially, increased thread count leads to better GPU resource utilization.
+- After reaching a threshold, managing more threads adds overhead, and the execution time does not improve, indicating an optimal thread count range for efficiency.
+
+### Weak Scaling Analysis for SampleSort with MPI
+![](./sample_sort/Sample%20Sort%20Weak%20Scaling%20MPI.png)
+#### Graph Overview
+- Weak scaling is examined by proportionally increasing the problem size with the number of processors.
+
+#### Trends
+- Ideally, execution time should remain constant with increases in problem size and processor count.
+- The execution time increases with more processors and larger problem sizes, which deviates from the ideal.
+
+#### Interpretation
+- The increase in execution time may indicate significant communication overhead or imbalanced work distribution among processors.
+
+### Weak Scaling Analysis for SampleSort with CUDA
+![](./sample_sort/Sample%20Sort%20Weak%20Scaling%20CUDA.png)
+#### Graph Overview
+- Similar to MPI, this graph shows execution time against increasing problem size and number of threads in a block.
+
+#### Trends
+- The execution time remains relatively constant as problem size and thread count increase, demonstrating good weak scaling.
+
+#### Interpretation
+- Consistent execution times across different thread counts suggest that the GPU implementation is efficiently parallelized, handling larger problem sizes effectively without a significant rise in execution time.
