@@ -1,0 +1,16 @@
+sbatch merge_sort2.grace_job 65536 128 s
+sbatch merge_sort2.grace_job 65536 128 r
+sbatch merge_sort2.grace_job 65536 128 rs
+sbatch merge_sort2.grace_job 65536 128 p
+sbatch merge_sort2.grace_job 262144 128 s
+sbatch merge_sort2.grace_job 262144 128 r
+sbatch merge_sort2.grace_job 262144 128 rs
+sbatch merge_sort2.grace_job 262144 128 p
+sbatch merge_sort2.grace_job 1048576 128 s
+sbatch merge_sort2.grace_job 1048576 128 r
+sbatch merge_sort2.grace_job 1048576 128 rs
+sbatch merge_sort2.grace_job 1048576 128 p
+sbatch merge_sort2.grace_job 4194304 128 s
+sbatch merge_sort2.grace_job 4194304 128 r
+sbatch merge_sort2.grace_job 4194304 128 rs
+sbatch merge_sort2.grace_job 4194304 128 p
