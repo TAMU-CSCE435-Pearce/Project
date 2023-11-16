@@ -67,6 +67,10 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    printf("Number of values: %d\n", num_vals);
+    printf("Number of threads: %d\n", threads);
+    printf("List type: %s\n", argv[3]);
+
     int* h_A = (int*) malloc(num_vals * sizeof(int));
 
     // Generate data
@@ -93,6 +97,15 @@ int main(int argc, char* argv[]) {
     isSortedAndPrint(h_A, num_vals);
     CALI_MARK_END("correctness_check");
 
+    // Mark comp_small and comm_small cali to 0
+    CALI_MARK_BEGIN("comm");
+    CALI_MARK_BEGIN("comm_small");
+    CALI_MARK_END("comm_small");
+    CALI_MARK_END("comm");
+    CALI_MARK_BEGIN("comp");
+    CALI_MARK_BEGIN("comp_small");
+    CALI_MARK_END("comp_small");
+    CALI_MARK_END("comp");
 
     free(h_A);
 
@@ -138,7 +151,8 @@ int main(int argc, char* argv[]) {
     adiak::value("SizeOfDatatype", sizeOfDatatype);
     adiak::value("InputSize", num_vals);
     adiak::value("InputType", inputType);
-    adiak::value("num_procs", threads);
+    adiak::value("num_threads", threads);
+    adiak::value("num_blocks", threads);
     adiak::value("group_num", group_number);
     adiak::value("implementation_source", implementation_source);
 
