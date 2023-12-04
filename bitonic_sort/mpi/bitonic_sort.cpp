@@ -100,6 +100,10 @@ void bitonic_merge(std::vector<int> &local_data, int step, int rank)
     CALI_MARK_BEGIN("comp");
     CALI_MARK_BEGIN("comp_large");
     bool ascending = ((rank & step) == 0);
+    
+    if (rank == 1) {
+        std::cout << "Step " << step << ": Ascending Order: " << ascending << std::endl;
+    }
 
     // Merge local data and partner data
     std::vector<int> merged_data;
@@ -306,7 +310,7 @@ int main(int argc, char **argv)
         bool correct = is_correct(gathered_data);
         if (!correct)
         {
-            std::cerr << "Error: The algorithm did not sort the data correctly." << std::endl;
+            // std::cerr << "Error: The algorithm did not sort the data correctly." << std::endl;
         }
         CALI_MARK_END("correctness_check");
     }

@@ -1,0 +1,58 @@
+__rec=node,id=12,attr=10,data=64,parent=3
+__rec=node,id=13,attr=8,data=attribute.alias,parent=12
+__rec=node,id=14,attr=8,data=attribute.unit,parent=12
+__rec=node,id=81,attr=14,data=sec,parent=5
+__rec=node,id=82,attr=13,data=Min time/rank,parent=81
+__rec=node,id=83,attr=10,data=65,parent=82
+__rec=node,id=84,attr=8,data=min#inclusive#sum#time.duration,parent=83
+__rec=node,id=85,attr=13,data=Max time/rank,parent=81
+__rec=node,id=86,attr=10,data=65,parent=85
+__rec=node,id=87,attr=8,data=max#inclusive#sum#time.duration,parent=86
+__rec=node,id=88,attr=13,data=Avg time/rank,parent=81
+__rec=node,id=89,attr=10,data=65,parent=88
+__rec=node,id=90,attr=8,data=avg#inclusive#sum#time.duration,parent=89
+__rec=node,id=93,attr=10,data=193,parent=5
+__rec=node,id=94,attr=8,data=avg.sum#inclusive#sum#time.duration,parent=93
+__rec=node,id=91,attr=10,data=193,parent=2
+__rec=node,id=92,attr=8,data=avg.count#inclusive#sum#time.duration,parent=91
+__rec=node,id=95,attr=13,data=Total time,parent=81
+__rec=node,id=96,attr=10,data=65,parent=95
+__rec=node,id=97,attr=8,data=sum#inclusive#sum#time.duration,parent=96
+__rec=node,id=98,attr=13,data=Variance time/rank,parent=5
+__rec=node,id=99,attr=10,data=65,parent=98
+__rec=node,id=100,attr=8,data=variance#inclusive#sum#time.duration,parent=99
+__rec=node,id=102,attr=8,data=var.sum#inclusive#sum#time.duration,parent=93
+__rec=node,id=103,attr=8,data=var.sqsum#inclusive#sum#time.duration,parent=93
+__rec=node,id=101,attr=8,data=var.count#inclusive#sum#time.duration,parent=91
+__rec=node,id=104,attr=13,data=Retiring,parent=5
+__rec=node,id=105,attr=10,data=65,parent=104
+__rec=node,id=106,attr=8,data=any#any#topdown.retiring,parent=105
+__rec=node,id=107,attr=13,data=Backend bound,parent=5
+__rec=node,id=108,attr=10,data=65,parent=107
+__rec=node,id=109,attr=8,data=any#any#topdown.backend_bound,parent=108
+__rec=node,id=110,attr=13,data=Frontend bound,parent=5
+__rec=node,id=111,attr=10,data=65,parent=110
+__rec=node,id=112,attr=8,data=any#any#topdown.frontend_bound,parent=111
+__rec=node,id=113,attr=13,data=Bad speculation,parent=5
+__rec=node,id=114,attr=10,data=65,parent=113
+__rec=node,id=115,attr=8,data=any#any#topdown.bad_speculation,parent=114
+__rec=node,id=116,attr=13,data=Node order,parent=2
+__rec=node,id=117,attr=10,data=65,parent=116
+__rec=node,id=118,attr=8,data=min#min#aggregate.slot,parent=117
+__rec=node,id=15,attr=8,data=spot.channel,parent=12
+__rec=node,id=119,attr=15,data=regionprofile
+__rec=ctx,ref=119,attr=84=87=90=94=92=97=100=102=103=101=106=109=112=115=118,data=0.011643=0.011657=0.011650=0.023300=2=0.023300=0.000000=0.023300=0.000271=2=0.283831=0.136279=0.496536=0.083354=0
+__rec=node,id=60,attr=10,data=276,parent=3
+__rec=node,id=61,attr=8,data=region,parent=60
+__rec=node,id=62,attr=61,data=main
+__rec=ctx,ref=62=119,attr=84=87=90=94=92=97=100=102=103=101=106=109=112=115=118,data=0.911231=2.914338=1.912785=3.825569=2=3.825569=1.003109=3.825569=9.323708=2=0.320906=0.255604=0.301477=0.122014=1
+__rec=node,id=70,attr=61,data=data_init,parent=62
+__rec=ctx,ref=70=119,attr=84=87=90=94=92=97=100=102=103=101=106=109=112=115=118,data=0.009068=0.009068=0.009068=0.009068=1=0.009068=0.000000=0.009068=0.000082=1=0.528501=0.455218=0.007916=0.008366=2
+__rec=node,id=71,attr=61,data=comm,parent=62
+__rec=ctx,ref=71=119,attr=84=87=90=94=92=97=100=102=103=101=106=109=112=115=118,data=0.013386=0.026764=0.020075=0.040150=2=0.040150=0.000045=0.040150=0.000896=2=0.330502=0.113864=0.486396=0.069237=2
+__rec=node,id=72,attr=61,data=comm_small,parent=71
+__rec=ctx,ref=72=119,attr=84=87=90=94=92=97=100=102=103=101=106=109=112=115=118,data=0.000015=0.000015=0.000015=0.000015=1=0.000015=0.000000=0.000015=0.000000=1=0.358959=0.092725=0.474477=0.073839=4
+__rec=node,id=73,attr=61,data=comp,parent=62
+__rec=ctx,ref=73=119,attr=84=87=90=94=92=97=100=102=103=101=106=109=112=115=118,data=0.171819=0.173723=0.172771=0.345542=2=0.345542=0.000001=0.345542=0.059701=2=0.335034=0.091268=0.515091=0.058607=5
+__rec=node,id=74,attr=61,data=comp_small,parent=73
+__rec=ctx,ref=74=119,attr=84=87=90=94=92=97=100=102=103=101=106=109=112=115=118,data=0.000015=0
